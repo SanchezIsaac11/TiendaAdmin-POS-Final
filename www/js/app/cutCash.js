@@ -6,9 +6,6 @@
 function initCutCash() {
   const btnCerrarTurno = document.getElementById('btnCerrarTurno');
   const btnCutPreview = document.getElementById('btnCutPreview');
-  const btnCutCancel = document.getElementById('btnCutCancel');
-  const btnCutOtherShift = document.getElementById('btnCutOtherShift');
-  const btnCutDateSelector = document.getElementById('btnCutDateSelector');
   const inputEfectivoContado = document.getElementById('inputEfectivoContado');
 
   const MONTHS_ES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
@@ -23,35 +20,20 @@ function initCutCash() {
     if (cutCajaName) cutCajaName.textContent = terminalInfo.name;
 
     const dateLabel = document.getElementById('cutCurrentDateLabel');
-    if (dateLabel) dateLabel.textContent = `Hoy, ${formatLongDate(new Date())}`;
+    if (dateLabel) dateLabel.textContent = formatLongDate(new Date());
 
     let shiftData = null;
     if (window.PosDataService && typeof window.PosDataService.getTerminalShift === 'function') {
       shiftData = await window.PosDataService.getTerminalShift(terminalInfo.code);
     }
 
-    const badgeShiftStatus = document.querySelector('.badge-shift-status');
-    const aperturaLabel = document.getElementById('cutAperturaTime');
-    const durationLabel = document.getElementById('cutShiftDuration');
     const initialFundLabel = document.getElementById('cutInitialFund');
-    const cashierLabel = document.getElementById('cutCashierName');
 
     if (shiftData && shiftData.is_open && shiftData.shift) {
       const shift = shiftData.shift;
       const start = new Date(shift.opened_at);
-      const now = new Date();
-      const minutes = Math.max(0, Math.floor((now - start) / 60000));
 
-      if (badgeShiftStatus) {
-        badgeShiftStatus.innerHTML = `<span class="dot-shift-active" style="background:#10b981;"></span> Turno en curso`;
-        badgeShiftStatus.style.background = '#ecfdf5';
-        badgeShiftStatus.style.color = '#065f46';
-      }
-
-      if (aperturaLabel) aperturaLabel.textContent = `${formatShortDate(start)} · ${formatTime(start)}`;
-      if (durationLabel) durationLabel.textContent = `${Math.floor(minutes / 60)} h ${minutes % 60} min`;
       if (initialFundLabel) initialFundLabel.textContent = `$${parseFloat(shift.initial_fund || 1000).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-      if (cashierLabel) cashierLabel.textContent = shift.cashier_name || (window.currentSessionUser && window.currentSessionUser.name) || 'Cajero';
 
       const live = shiftData.live_totals || {};
       const totalSalesCount = live.total_sales_count || 0;
@@ -142,17 +124,7 @@ function initCutCash() {
         if (span) span.textContent = 'Cerrar turno y generar corte';
       }
     } else {
-      // TURNO CERRADO
-      if (badgeShiftStatus) {
-        badgeShiftStatus.innerHTML = `<span class="dot-shift-active" style="background:#ef4444;"></span> Turno cerrado`;
-        badgeShiftStatus.style.background = '#fef2f2';
-        badgeShiftStatus.style.color = '#991b1b';
-      }
-
       const last = (shiftData && shiftData.last_shift) || {};
-      if (cashierLabel) cashierLabel.textContent = last.cashier_name || (window.currentSessionUser && window.currentSessionUser.name) || 'Cajero';
-      if (aperturaLabel) aperturaLabel.textContent = last.opened_at ? `${formatShortDate(new Date(last.opened_at))} · ${formatTime(new Date(last.opened_at))}` : 'Sin apertura';
-      if (durationLabel) durationLabel.textContent = last.closed_at ? 'Cerrado' : '0 h 0 min';
       if (initialFundLabel) initialFundLabel.textContent = `$${parseFloat(last.initial_fund || 1000).toFixed(2)}`;
 
       const cutTotalSalesHeader = document.getElementById('cutTotalSalesHeader');
@@ -168,7 +140,7 @@ function initCutCash() {
         btnCerrarTurno.style.opacity = '0.5';
         btnCerrarTurno.style.cursor = 'not-allowed';
         const span = btnCerrarTurno.querySelector('span');
-        if (span) span.textContent = 'Turno ya cerrado';
+        if (span) span.textContent = 'Corte ya realizado';
       }
     }
   }
@@ -281,52 +253,27 @@ function initCutCash() {
       const expCash = initialFundVal + cashSalesVal + cashInflowsVal - cashOutflowsVal;
 
       showModal(
-        'Vista Previa: Comprobante de Corte',
+        'Vista Previa: Corte de Caja',
         `========================================\n` +
-        `         TIENDA ABARROTES NEXUS\n` +
-        `      COMPROBANTE DE CORTE DE CAJA\n` +
+        `         CORTE DE CAJA - TIENDA\n` +
         `========================================\n` +
         `Caja: ${terminalInfo.name} (${terminalInfo.code})\n` +
         `Fecha: ${formatShortDate(now)} ${formatTime(now)}\n` +
-        `Apertura: ${formatShortDate(new Date(shift.opened_at))} ${formatTime(new Date(shift.opened_at))}\n` +
         `----------------------------------------\n` +
         `Fondo inicial:        $${initialFundVal.toFixed(2)}\n` +
         `Ventas Totales (${live.total_sales_count || 0}):   $${parseFloat(live.total_sales_amount || 0).toFixed(2)}\n` +
         `  - Efectivo:         $${cashSalesVal.toFixed(2)}\n` +
         `  - Tarjeta:          $${parseFloat(live.card_sales || 0).toFixed(2)}\n` +
-        `  - Transferencia/QR: $${parseFloat(live.transfer_sales || 0).toFixed(2)}\n` +
-        `  - Pago Mixto:       $${parseFloat(live.mixed_sales || 0).toFixed(2)}\n` +
+        `  - Transferencia:    $${parseFloat(live.transfer_sales || 0).toFixed(2)}\n` +
+        `  - Mixto:            $${parseFloat(live.mixed_sales || 0).toFixed(2)}\n` +
         `----------------------------------------\n` +
-        `Total Ingresos (${inCount}):     + $${totalInflowsVal.toFixed(2)} (Efectivo: + $${cashInflowsVal.toFixed(2)})\n` +
-        `Total Egresos (${outCount}):      - $${totalOutflowsVal.toFixed(2)} (Efectivo: - $${cashOutflowsVal.toFixed(2)})\n` +
+        `Ingresos (${inCount}):        + $${totalInflowsVal.toFixed(2)}\n` +
+        `Egresos (${outCount}):         - $${totalOutflowsVal.toFixed(2)}\n` +
         `----------------------------------------\n` +
         `Efectivo esperado:    $${expCash.toFixed(2)}\n` +
         `Efectivo contado:     $${contadoStr}\n` +
         `========================================`
       );
-    });
-  }
-
-  if (btnCutCancel) {
-    btnCutCancel.addEventListener('click', () => {
-      window.switchView('pos');
-    });
-  }
-
-  // Ver otros turnos / Histórico de cortes -> Abre módulo de Reportes
-  if (btnCutOtherShift) {
-    btnCutOtherShift.addEventListener('click', () => {
-      if (typeof window.switchView === 'function') {
-        window.switchView('reports');
-      }
-    });
-  }
-
-  if (btnCutDateSelector) {
-    btnCutDateSelector.addEventListener('click', () => {
-      if (typeof window.switchView === 'function') {
-        window.switchView('reports');
-      }
     });
   }
 

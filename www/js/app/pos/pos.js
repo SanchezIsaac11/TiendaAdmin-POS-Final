@@ -95,6 +95,34 @@ function initPos() {
     return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   };
 
+  function evaluateCartItemPromo(item) {
+    if (window.PosPromotions && typeof window.PosPromotions.evaluateItem === 'function') {
+      return window.PosPromotions.evaluateItem(item);
+    }
+    let rule = item.promoRule;
+    if (typeof rule === 'string' && rule.trim().startsWith('{')) {
+      try { rule = JSON.parse(rule); } catch (e) { rule = null; }
+    }
+    if (!rule || item.isService) return null;
+    const rawSubtotal = (item.unitPrice || 0) * (item.quantity || 1);
+    const pType = rule.type || (rule.discount_percent != null || rule.percentage != null ? 'percentage' : (rule.bundle_price != null ? 'bundle' : null));
+    if (pType === 'bundle' && rule.quantity >= 2 && rule.bundle_price != null) {
+      const bundles = Math.floor(item.quantity / rule.quantity);
+      if (bundles > 0) {
+        const discount = (bundles * rule.quantity * item.unitPrice) - (bundles * rule.bundle_price);
+        if (discount > 0) {
+          return { discount, badge: rule.badge_text || `${rule.quantity}x$${rule.bundle_price}` };
+        }
+      }
+    } else if (pType === 'percentage' || pType === 'percent') {
+      const pct = parseFloat(rule.discount_percent ?? rule.percentage ?? 0);
+      if (pct > 0 && pct <= 100) {
+        return { discount: (rawSubtotal * pct) / 100, badge: rule.badge_text || `-${pct}%` };
+      }
+    }
+    return null;
+  }
+
   function calculateTotals() {
     let subtotalAccumulated = 0;
     let totalDiscount = 0;
@@ -105,31 +133,9 @@ function initPos() {
       const rawItemSubtotal = item.unitPrice * item.quantity;
       subtotalAccumulated += rawItemSubtotal;
 
-      let rule = item.promoRule;
-      if (typeof rule === 'string' && rule.trim().startsWith('{')) {
-        try { rule = JSON.parse(rule); } catch (e) { rule = null; }
-      }
-
-      if (rule) {
-        const pType = rule.type || (rule.discount_percent != null || rule.percentage != null ? 'percentage' : (rule.bundle_price != null ? 'bundle' : null));
-        if (pType === 'bundle' && rule.quantity >= 2 && rule.bundle_price != null) {
-          const bundles = Math.floor(item.quantity / rule.quantity);
-          if (bundles > 0) {
-            const normalCostForBundles = bundles * rule.quantity * item.unitPrice;
-            const promoCostForBundles = bundles * rule.bundle_price;
-            // Solo aplicar si la promo descuenta (nunca cobrar más que el precio normal)
-            if (promoCostForBundles < normalCostForBundles) {
-              const discount = normalCostForBundles - promoCostForBundles;
-              totalDiscount += discount;
-            }
-          }
-        } else if (pType === 'percentage' || pType === 'percent') {
-          const pct = parseFloat(rule.discount_percent ?? rule.percentage ?? 0);
-          if (pct > 0 && pct <= 100) {
-            const discount = (rawItemSubtotal * pct) / 100;
-            totalDiscount += discount;
-          }
-        }
+      const evalPromo = evaluateCartItemPromo(item);
+      if (evalPromo && evalPromo.discount > 0) {
+        totalDiscount += evalPromo.discount;
       }
     });
 
@@ -172,39 +178,10 @@ function initPos() {
 
       if (item.unitPrice == null && item.price != null) item.unitPrice = item.price;
       const rawSubtotal = (item.unitPrice || 0) * (item.quantity || 1);
-      let finalItemSubtotal = rawSubtotal;
-      let hasPromoApplied = false;
-      let promoBadgeText = '';
-
-      let rule = item.promoRule;
-      if (typeof rule === 'string' && rule.trim().startsWith('{')) {
-        try { rule = JSON.parse(rule); } catch (e) { rule = null; }
-      }
-
-      if (rule) {
-        const pType = rule.type || (rule.discount_percent != null || rule.percentage != null ? 'percentage' : (rule.bundle_price != null ? 'bundle' : null));
-        if (pType === 'bundle' && rule.quantity >= 2 && rule.bundle_price != null) {
-          const bundles = Math.floor(item.quantity / rule.quantity);
-          if (bundles > 0) {
-            const normalCostForBundles = bundles * rule.quantity * item.unitPrice;
-            const promoCostForBundles = bundles * rule.bundle_price;
-            // Solo aplicar promo si es más barata que el precio normal
-            if (promoCostForBundles < normalCostForBundles) {
-              hasPromoApplied = true;
-              promoBadgeText = rule.badge_text || `${rule.quantity}x$${rule.bundle_price}`;
-              const remaining = item.quantity % rule.quantity;
-              finalItemSubtotal = promoCostForBundles + (remaining * item.unitPrice);
-            }
-          }
-        } else if (pType === 'percentage' || pType === 'percent') {
-          const pct = parseFloat(rule.discount_percent ?? rule.percentage ?? 0);
-          if (pct > 0 && pct <= 100) {
-            hasPromoApplied = true;
-            promoBadgeText = rule.badge_text || `-${pct}%`;
-            finalItemSubtotal = Math.max(0, rawSubtotal - ((rawSubtotal * pct) / 100));
-          }
-        }
-      }
+      const evalPromo = evaluateCartItemPromo(item);
+      const hasPromoApplied = !!(evalPromo && evalPromo.discount > 0);
+      const promoBadgeText = hasPromoApplied ? (evalPromo.badge || evalPromo.nombre || 'Promo') : '';
+      const finalItemSubtotal = hasPromoApplied ? Math.max(0, rawSubtotal - evalPromo.discount) : rawSubtotal;
 
       const safeTitle = escapeHtml(item.name || '');
       const safeDisplay = escapeHtml(item.displayName || item.name || '');
@@ -1088,6 +1065,10 @@ function initPos() {
   window.suspendCurrentSale = suspendCurrentSale;
   window.openSuspendedModal = openSuspendedModal;
   window.resumeSuspendedSale = resumeSuspendedSale;
+
+  window.addEventListener('promotions:changed', () => {
+    if (typeof renderCart === 'function') renderCart();
+  });
 }
 
 window.initPos = initPos;

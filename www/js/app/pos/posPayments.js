@@ -88,22 +88,13 @@ function initPosPayments() {
     if (el) el.addEventListener('input', updateMixedTotalCheck);
   });
 
-  const billButtons = document.querySelectorAll('.btn-bill');
-  billButtons.forEach(btn => {
-    btn.addEventListener('click', () => {
-      const totals = typeof calculateTotals === 'function' ? calculateTotals() : { totalNet: 0 };
-      const val = btn.dataset.amount;
-      if (val === 'exact') {
-        cashReceivedInput.value = totals.totalNet.toFixed(2);
-      } else {
-        cashReceivedInput.value = parseFloat(val).toFixed(2);
-      }
-      updateCashChange();
-    });
-  });
-
   if (cashReceivedInput) {
     cashReceivedInput.addEventListener('input', updateCashChange);
+  }
+
+  // Asegurar que la calculadora compacta de efectivo se muestre si Efectivo está activo al iniciar
+  if (cashCalculator && (!state.selectedPaymentMethod || state.selectedPaymentMethod === 'cash')) {
+    cashCalculator.style.display = 'block';
   }
 
   // ---------------------------------------------------------------------------

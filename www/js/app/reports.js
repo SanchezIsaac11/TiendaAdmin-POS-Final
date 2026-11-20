@@ -7,10 +7,12 @@ function initReports() {
   const repFilterStartDate = document.getElementById('repFilterStartDate');
   const repFilterEndDate = document.getElementById('repFilterEndDate');
   const repFilterTerminal = document.getElementById('repFilterTerminal');
-  const btnRunReports = document.getElementById('btnRunReports');
+  const btnExportReportsExcel = document.getElementById('btnExportReportsExcel');
   const reportsTableBody = document.getElementById('reportsTableBody');
   const reportsEmptyState = document.getElementById('reportsEmptyState');
   const reportsTableWrapper = document.getElementById('reportsTableWrapper');
+  const presetBtns = document.querySelectorAll('.btn-rep-preset');
+  let lastLoadedCuts = [];
 
   // Inicializar fechas por defecto (últimos 7 días)
   const pad = (n) => String(n).padStart(2, '0');
@@ -26,7 +28,11 @@ function initReports() {
     repFilterStartDate.value = formatIsoDate(sevenDaysAgo);
   }
 
-  // Presets rápidos
+  function setActivePreset(activeBtn) {
+    presetBtns.forEach(b => b.classList.toggle('active', b === activeBtn));
+  }
+
+  // Presets rápidos (1 clic)
   const btnPresetToday = document.getElementById('btnPresetToday');
   const btnPreset7Days = document.getElementById('btnPreset7Days');
   const btnPresetMonth = document.getElementById('btnPresetMonth');
@@ -35,6 +41,7 @@ function initReports() {
     btnPresetToday.addEventListener('click', () => {
       if (repFilterStartDate) repFilterStartDate.value = formatIsoDate(today);
       if (repFilterEndDate) repFilterEndDate.value = formatIsoDate(today);
+      setActivePreset(btnPresetToday);
       loadReportsData();
     });
   }
@@ -43,6 +50,7 @@ function initReports() {
     btnPreset7Days.addEventListener('click', () => {
       if (repFilterStartDate) repFilterStartDate.value = formatIsoDate(sevenDaysAgo);
       if (repFilterEndDate) repFilterEndDate.value = formatIsoDate(today);
+      setActivePreset(btnPreset7Days);
       loadReportsData();
     });
   }
@@ -52,7 +60,51 @@ function initReports() {
       const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
       if (repFilterStartDate) repFilterStartDate.value = formatIsoDate(firstDay);
       if (repFilterEndDate) repFilterEndDate.value = formatIsoDate(today);
+      setActivePreset(btnPresetMonth);
       loadReportsData();
+    });
+  }
+
+  // Recargar automáticamente al cambiar cualquier filtro (sin botón extra)
+  [repFilterStartDate, repFilterEndDate, repFilterTerminal].forEach(el => {
+    if (el) {
+      el.addEventListener('change', () => {
+        if (el !== repFilterTerminal) setActivePreset(null);
+        loadReportsData();
+      });
+    }
+  });
+
+  if (btnExportReportsExcel) {
+    btnExportReportsExcel.addEventListener('click', () => {
+      if (!lastLoadedCuts || lastLoadedCuts.length === 0) {
+        showModal('Sin Datos', 'No hay cortes en el periodo seleccionado para exportar.');
+        return;
+      }
+      const headers = ['Caja', 'Cajero', 'Apertura', 'Cierre', 'Ventas', 'Total Vendido', 'Efectivo', 'Tarjeta', 'Transferencia', 'Efectivo Contado', 'Estado'];
+      const rows = lastLoadedCuts.map(c => [
+        c.terminal_name || c.terminal_code || 'Caja 1',
+        c.cashier_name || 'Cajero',
+        c.opened_at ? new Date(c.opened_at).toLocaleString('es-MX') : '',
+        c.closed_at ? new Date(c.closed_at).toLocaleString('es-MX') : 'Abierto',
+        Number(c.total_sales_count) || 0,
+        { value: parseFloat(c.total_sales_amount) || 0, currency: true },
+        { value: parseFloat(c.cash_sales) || 0, currency: true },
+        { value: parseFloat(c.card_sales) || 0, currency: true },
+        { value: parseFloat(c.transfer_sales || c.qr_sales) || 0, currency: true },
+        { value: parseFloat(c.counted_cash) || 0, currency: true },
+        c.status === 'open' ? 'Abierto' : 'Cerrado'
+      ]);
+      if (typeof window.exportToExcel === 'function') {
+        const s = repFilterStartDate?.value || 'reporte';
+        const e = repFilterEndDate?.value || '';
+        window.exportToExcel({
+          filename: `reporte_caja_${s}${e ? '_a_' + e : ''}`,
+          sheetName: 'Reportes de Caja',
+          headers,
+          rows
+        });
+      }
     });
   }
 
@@ -61,19 +113,10 @@ function initReports() {
     const endDate = repFilterEndDate ? repFilterEndDate.value : null;
     const terminal = repFilterTerminal ? repFilterTerminal.value : 'all';
 
-    if (btnRunReports) {
-      btnRunReports.disabled = true;
-      btnRunReports.textContent = 'Consultando...';
-    }
-
     const res = await window.PosDataService.fetchReports(startDate, endDate, terminal);
 
-    if (btnRunReports) {
-      btnRunReports.disabled = false;
-      btnRunReports.textContent = 'Consultar';
-    }
-
     if (!res || !res.ok) {
+      lastLoadedCuts = [];
       if (reportsEmptyState) {
         reportsEmptyState.style.display = 'block';
         reportsEmptyState.innerHTML = `
@@ -93,44 +136,32 @@ function initReports() {
     }
 
     const { cuts, totals } = res;
+    lastLoadedCuts = cuts || [];
 
-    // Actualizar KPI Cards
+    // Actualizar KPI Cards esenciales (4 tarjetas claras)
     const kpiRepTotalSales = document.getElementById('kpiRepTotalSales');
-    const kpiRepCutsCount = document.getElementById('kpiRepCutsCount');
     const kpiRepTicketsCount = document.getElementById('kpiRepTicketsCount');
     const kpiRepCashSales = document.getElementById('kpiRepCashSales');
-    const kpiRepCardSales = document.getElementById('kpiRepCardSales');
-    const kpiRepTransferSales = document.getElementById('kpiRepTransferSales');
-    const kpiRepMixedSales = document.getElementById('kpiRepMixedSales');
-    const kpiRepInflows = document.getElementById('kpiRepInflows');
-    const kpiRepOutflows = document.getElementById('kpiRepOutflows');
+    const kpiRepElectronicSales = document.getElementById('kpiRepElectronicSales');
+    const kpiRepCutsCount = document.getElementById('kpiRepCutsCount');
     const kpiRepCountedCash = document.getElementById('kpiRepCountedCash');
 
     if (kpiRepTotalSales) kpiRepTotalSales.textContent = `$${totals.totalSalesAmount.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    if (kpiRepCutsCount) kpiRepCutsCount.textContent = totals.cutsCount;
-    if (kpiRepTicketsCount) kpiRepTicketsCount.textContent = totals.totalSalesCount;
-    if (kpiRepCashSales) kpiRepCashSales.textContent = `$${totals.totalCashSales.toFixed(2)}`;
-    if (kpiRepCardSales) kpiRepCardSales.textContent = `$${totals.totalCardSales.toFixed(2)}`;
-    if (kpiRepTransferSales) kpiRepTransferSales.textContent = `$${totals.totalTransferSales.toFixed(2)}`;
-    if (kpiRepMixedSales) kpiRepMixedSales.textContent = `$${totals.totalMixedSales.toFixed(2)}`;
-    if (kpiRepInflows) kpiRepInflows.textContent = `+$${totals.totalInflows.toFixed(2)}`;
-    if (kpiRepOutflows) kpiRepOutflows.textContent = `-$${(totals.totalOutflows + totals.totalSupplier).toFixed(2)}`;
+    if (kpiRepTicketsCount) kpiRepTicketsCount.textContent = `${totals.totalSalesCount} ventas`;
+    if (kpiRepCashSales) kpiRepCashSales.textContent = `$${totals.totalCashSales.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const electronicTotal = (totals.totalCardSales || 0) + (totals.totalTransferSales || 0) + (totals.totalMixedSales || 0);
+    if (kpiRepElectronicSales) kpiRepElectronicSales.textContent = `$${electronicTotal.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    if (kpiRepCutsCount) kpiRepCutsCount.textContent = `${totals.cutsCount} corte${totals.cutsCount === 1 ? '' : 's'}`;
     if (kpiRepCountedCash) kpiRepCountedCash.textContent = `$${totals.totalCountedCash.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-    // Renderizar tabla
+    // Renderizar tabla limpia (6 columnas)
     if (!cuts || cuts.length === 0) {
       if (reportsEmptyState) {
         reportsEmptyState.style.display = 'block';
         reportsEmptyState.innerHTML = `
-          <div style="padding: 48px 20px; text-align: center; color: #94a3b8;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width: 52px; height: 52px; margin-bottom: 12px; opacity: 0.6;">
-              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-              <line x1="16" y1="2" x2="16" y2="6"></line>
-              <line x1="8" y1="2" x2="8" y2="6"></line>
-              <line x1="3" y1="10" x2="21" y2="10"></line>
-            </svg>
-            <div style="font-weight: 600; color: #64748b; font-size: 15px;">No se encontraron cortes de caja</div>
-            <div style="font-size: 13px; color: #94a3b8; margin-top: 4px;">No hay registros para las fechas y terminal seleccionadas.</div>
+          <div style="padding: 40px 20px; text-align: center; color: #94a3b8;">
+            <div style="font-weight: 600; color: #64748b; font-size: 15px;">No hay cortes en estas fechas</div>
+            <div style="font-size: 13px; color: #94a3b8; margin-top: 4px;">Prueba seleccionando "Hoy", "7 días" o "Este mes".</div>
           </div>
         `;
       }
@@ -153,42 +184,38 @@ function initReports() {
       };
 
       const terminalBadgeClass = c.terminal_code === 'C2' ? 'badge-caja-c2' : 'badge-caja-c1';
-      const statusBadge = c.status === 'open' 
-        ? `<span class="badge-status-open" style="background:#ecfdf5; color:#065f46; padding:3px 8px; border-radius:12px; font-size:11px; font-weight:700;">Abierto</span>`
-        : `<span class="badge-status-closed" style="background:#f1f5f9; color:#475569; padding:3px 8px; border-radius:12px; font-size:11px; font-weight:700;">Cerrado</span>`;
+      const statusBadge = c.status === 'open'
+        ? `<span style="background:#ecfdf5; color:#065f46; padding:2px 8px; border-radius:12px; font-size:11px; font-weight:700;">Abierto</span>`
+        : `<span style="background:#f1f5f9; color:#475569; padding:2px 8px; border-radius:12px; font-size:11px; font-weight:700;">Cerrado</span>`;
 
       const totAmount = parseFloat(c.total_sales_amount || 0).toFixed(2);
-      const cash = parseFloat(c.cash_sales || 0).toFixed(2);
-      const card = parseFloat(c.card_sales || 0).toFixed(2);
-      const transf = parseFloat(c.transfer_sales || c.qr_sales || 0).toFixed(2);
-      const mixed = parseFloat(c.mixed_sales || 0).toFixed(2);
-      const expected = parseFloat(c.expected_cash || 0).toFixed(2);
       const counted = parseFloat(c.counted_cash || 0).toFixed(2);
+      const cash = parseFloat(c.cash_sales || 0).toFixed(2);
 
       return `
         <tr class="report-cut-row" data-cut-id="${c.id}">
-          <td style="font-weight: 700; color: #1e293b;">#Corte-${c.id}</td>
+          <td style="font-size: 12.5px; color: #334155;">
+            <div style="font-weight: 600;">${formatDt(openDate)}</div>
+            <div style="font-size: 11px; color: #64748b;">Cierre: ${closeDate ? formatDt(closeDate) : 'Abierto'}</div>
+          </td>
           <td>
-            <span class="pill-caja ${terminalBadgeClass}" style="font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px;">
-              ${c.terminal_name || c.terminal_code}
-            </span>
+            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+              <span class="pill-caja ${terminalBadgeClass}" style="font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 6px;">
+                ${c.terminal_name || c.terminal_code}
+              </span>
+              <span style="font-size: 12.5px; font-weight: 600; color: #334155;">${c.cashier_name || 'Cajero'}</span>
+            </div>
           </td>
-          <td style="font-size: 12px; color: #64748b;">${formatDt(openDate)}</td>
-          <td style="font-size: 12px; color: #64748b;">${closeDate ? formatDt(closeDate) : '<span style="color:#10b981;font-weight:600;">En curso</span>'}</td>
-          <td style="font-size: 13px; font-weight: 600; color: #334155;">${c.cashier_name || 'Cajero'}</td>
           <td style="text-align: center; font-weight: 600;">${c.total_sales_count || 0}</td>
-          <td style="text-align: right; font-weight: 700; color: #0f172a; font-size: 14px;">$${totAmount}</td>
-          <td style="font-size: 11px; color: #64748b; line-height: 1.4;">
-            <div>Ef: <strong>$${cash}</strong> | Tq: <strong>$${card}</strong></div>
-            <div>Tr: <strong>$${transf}</strong> | Mx: <strong>$${mixed}</strong></div>
+          <td style="text-align: right;">
+            <div style="font-weight: 700; color: #0f172a; font-size: 14px;">$${totAmount}</div>
+            <div style="font-size: 11px; color: #64748b;">Efectivo: $${cash}</div>
           </td>
-          <td style="text-align: right; font-size: 12px;">$${parseFloat(c.initial_fund || 0).toFixed(2)}</td>
-          <td style="text-align: right; font-size: 12px; font-weight: 600; color: #0284c7;">$${expected}</td>
-          <td style="text-align: right; font-size: 12px; font-weight: 700; color: #0f172a;">$${counted}</td>
-          <td style="text-align: center;">${statusBadge}</td>
-          <td style="text-align: center;">
-            <button type="button" class="btn-rep-detail" onclick="window.viewCutDetail(${c.id})" style="background:#f1f5f9; border:1px solid #cbd5e1; border-radius:6px; padding:4px 8px; font-size:12px; cursor:pointer;">
-              Detalle
+          <td style="text-align: right; font-weight: 700; color: #0f172a;">$${counted}</td>
+          <td style="text-align: center; white-space: nowrap;">
+            ${statusBadge}
+            <button type="button" class="btn-rep-detail" onclick="window.viewCutDetail(${c.id})" style="background:#f1f5f9; border:1px solid #cbd5e1; border-radius:6px; padding:4px 10px; font-size:12px; cursor:pointer; margin-left:6px; font-weight:600;">
+              Ver
             </button>
           </td>
         </tr>
@@ -197,10 +224,6 @@ function initReports() {
   }
 
   window.loadReportsData = loadReportsData;
-
-  if (btnRunReports) {
-    btnRunReports.addEventListener('click', loadReportsData);
-  }
 
   // Modal para ver detalle completo de un corte específico
   window.viewCutDetail = async function(cutId) {

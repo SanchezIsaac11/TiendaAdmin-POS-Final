@@ -9,15 +9,22 @@ function initPosServices() {
   const servicesToggleArrow = document.getElementById('servicesToggleArrow');
 
   if (btnToggleServices && servicesListContainer) {
-    btnToggleServices.addEventListener('click', () => {
-      const isHidden = servicesListContainer.style.display === 'none' || servicesListContainer.style.display === '';
+    btnToggleServices.addEventListener('click', (e) => {
+      e.preventDefault();
+      const computedDisplay = window.getComputedStyle ? window.getComputedStyle(servicesListContainer).display : servicesListContainer.style.display;
+      const isHidden = computedDisplay === 'none';
       if (isHidden) {
         servicesListContainer.style.display = 'flex';
+        servicesListContainer.classList.add('open');
         btnToggleServices.classList.add('active');
         btnToggleServices.setAttribute('aria-expanded', 'true');
         if (servicesToggleArrow) servicesToggleArrow.classList.add('open');
+        if (typeof servicesListContainer.scrollIntoView === 'function') {
+          setTimeout(() => servicesListContainer.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 30);
+        }
       } else {
         servicesListContainer.style.display = 'none';
+        servicesListContainer.classList.remove('open');
         btnToggleServices.classList.remove('active');
         btnToggleServices.setAttribute('aria-expanded', 'false');
         if (servicesToggleArrow) servicesToggleArrow.classList.remove('open');

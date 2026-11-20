@@ -590,26 +590,24 @@ function initInventory() {
       const rows = inventoryList.map(p => {
         const status = p.stock <= 0 ? 'Agotado' : (p.stock <= 5 ? 'Stock Bajo' : 'Óptimo');
         return [
-          `"${p.barcode}"`,
-          `"${p.name.replace(/"/g, '""')}"`,
-          `"${p.category.replace(/"/g, '""')}"`,
-          p.cost.toFixed(2),
-          p.price.toFixed(2),
-          p.stock,
+          p.barcode || '',
+          p.name || '',
+          p.category || 'Abarrotes',
+          { value: Number(p.cost) || 0, currency: true },
+          { value: Number(p.price) || 0, currency: true },
+          Number(p.stock) || 0,
           status
         ];
       });
 
-      const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\r\n');
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.setAttribute('href', url);
-      link.setAttribute('download', `inventario_nexus_${new Date().toISOString().slice(0, 10)}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      if (typeof window.exportToExcel === 'function') {
+        window.exportToExcel({
+          filename: `inventario_${new Date().toISOString().slice(0, 10)}`,
+          sheetName: 'Inventario',
+          headers,
+          rows
+        });
+      }
     });
   }
 
@@ -745,7 +743,7 @@ function initInventory() {
   }
 
   // =========================================================================
-  // MENÚ DESPLEGABLE DE ACCIONES DE INVENTARIO (SIMPLIFICADO)
+  // MENÚ DE ACCIONES DE INVENTARIO (SOLO EXPORTAR EXCEL)
   // =========================================================================
   const btnInvDropdown = document.getElementById('btnInvDropdown');
   const invDropdownMenu = document.getElementById('invDropdownMenu');
@@ -761,31 +759,6 @@ function initInventory() {
       if (!invDropdownMenu.contains(e.target) && e.target !== btnInvDropdown) {
         invDropdownMenu.style.display = 'none';
       }
-    });
-
-    document.getElementById('btnMenuRecibir')?.addEventListener('click', () => {
-      invDropdownMenu.style.display = 'none';
-      const rcvPanel = document.getElementById('receivePanel');
-      if (rcvPanel) {
-        rcvPanel.style.display = 'flex';
-      } else {
-        document.getElementById('btnRecibirMercancia')?.click();
-      }
-    });
-
-    document.getElementById('btnMenuEntrada')?.addEventListener('click', () => {
-      invDropdownMenu.style.display = 'none';
-      document.getElementById('btnEntradaCompra')?.click();
-    });
-
-    document.getElementById('btnMenuMerma')?.addEventListener('click', () => {
-      invDropdownMenu.style.display = 'none';
-      openShrinkageModal();
-    });
-
-    document.getElementById('btnMenuVerMermas')?.addEventListener('click', () => {
-      invDropdownMenu.style.display = 'none';
-      tabInvShrinkage?.click();
     });
 
     document.getElementById('btnMenuExport')?.addEventListener('click', () => {

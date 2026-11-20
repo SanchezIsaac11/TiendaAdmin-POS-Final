@@ -1,0 +1,291 @@
+/* ==========================================================================
+   APARTADO DE PROMOCIONES
+   Reutiliza las variables y componentes de styles.css (inventory-card,
+   modal-dialog-form, form-group, btn-inv, etc.). Solo agrega lo propio.
+   ========================================================================== */
+
+/* ---- Tarjetas de resumen ------------------------------------------------ */
+.promo-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+  flex-shrink: 0;
+}
+
+.promo-kpi {
+  background: var(--bg-input);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+}
+
+.promo-kpi-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.promo-kpi-value {
+  margin-top: 4px;
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--text-main);
+  letter-spacing: -0.5px;
+}
+
+.promo-kpi-live .promo-kpi-value { color: var(--green-primary); }
+
+/* ---- Barra de filtros --------------------------------------------------- */
+.promo-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.promo-filters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.promo-filter-pill {
+  border: 1px solid var(--border-light);
+  background: var(--bg-card);
+  color: var(--text-muted);
+  font-family: var(--font-main);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 7px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.promo-filter-pill:hover { border-color: var(--blue-primary); color: var(--blue-primary); }
+
+.promo-filter-pill.active {
+  background: var(--blue-primary);
+  border-color: var(--blue-primary);
+  color: #ffffff;
+}
+
+.promo-search {
+  width: 280px;
+  max-width: 100%;
+  padding: 9px 14px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  background: var(--bg-input);
+  font-family: var(--font-main);
+  font-size: 13.5px;
+  color: var(--text-main);
+}
+
+.promo-search:focus { outline: none; border-color: var(--blue-primary); background: #ffffff; }
+
+/* ---- Tabla -------------------------------------------------------------- */
+.promo-table-wrap {
+  flex: 1;
+  overflow: auto;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  min-height: 0;
+}
+
+.promo-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+
+.promo-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #f8fafc;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.promo-table tbody td {
+  padding: 13px 14px;
+  border-bottom: 1px solid var(--border-subtle);
+  vertical-align: middle;
+  color: var(--text-main);
+}
+
+.promo-table tbody tr:hover { background: #fafbfd; }
+
+.promo-name { font-weight: 600; }
+.promo-sub { margin-top: 2px; font-size: 12.5px; color: var(--text-muted); }
+.promo-vig { color: var(--text-muted); font-size: 13px; }
+
+.promo-empty {
+  display: none;
+  padding: 36px 16px;
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 14px;
+}
+
+/* ---- Estados ------------------------------------------------------------ */
+.promo-status {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.promo-st-live { background: var(--green-light); color: var(--green-primary); }
+.promo-st-off-hours { background: #fef3c7; color: #b45309; }
+.promo-st-scheduled { background: var(--blue-light); color: var(--blue-primary); }
+.promo-st-expired { background: #fee2e2; color: var(--red-accent); }
+.promo-st-inactive { background: #e2e8f0; color: #475569; }
+
+/* ---- Acciones ----------------------------------------------------------- */
+.promo-actions-cell {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.promo-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.promo-icon-btn {
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--border-light);
+  background: var(--bg-card);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 15px;
+  color: var(--text-muted);
+  transition: all 0.15s ease;
+}
+
+.promo-icon-btn:hover { border-color: var(--blue-primary); color: var(--blue-primary); }
+.promo-icon-btn.promo-danger:hover { border-color: var(--red-accent); color: var(--red-accent); }
+
+/* Interruptor activar / desactivar */
+.promo-switch {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 22px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.promo-switch input { opacity: 0; width: 0; height: 0; }
+
+.promo-slider {
+  position: absolute;
+  inset: 0;
+  background: #cbd5e1;
+  border-radius: 999px;
+  transition: background 0.15s ease;
+}
+
+.promo-slider::before {
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  left: 3px;
+  top: 3px;
+  background: #ffffff;
+  border-radius: 50%;
+  transition: transform 0.15s ease;
+}
+
+.promo-switch input:checked + .promo-slider { background: var(--green-badge); }
+.promo-switch input:checked + .promo-slider::before { transform: translateX(18px); }
+
+/* ---- Formulario (modal) ------------------------------------------------- */
+#modalPromoForm .modal-dialog-form {
+  max-width: 560px;
+  max-height: 92vh;
+  overflow-y: auto;
+}
+
+.promo-section-title {
+  margin: 16px 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-dim);
+}
+
+.promo-days {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.promo-days label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 10px;
+  border: 1px solid var(--border-light);
+  border-radius: 999px;
+  font-size: 12.5px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.promo-days input { width: auto; margin: 0; }
+
+.promo-hint { margin-top: 6px; font-size: 12px; color: var(--text-dim); }
+
+.promo-preview {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.promo-preview-ok { background: var(--green-light); color: var(--green-primary); font-weight: 500; }
+
+.promo-error {
+  display: none;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: #fee2e2;
+  color: var(--red-accent);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.promo-check-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  font-size: 13.5px;
+}
+
+.promo-check-row input { width: auto; margin: 0; }
+
+@media (max-width: 900px) {
+  .promo-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

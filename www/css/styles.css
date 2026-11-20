@@ -5523,3 +5523,258 @@ body.role-cajero .admin-only-nav,
   transform: translateY(1px);
 }
 
+/* ==========================================================================
+   AJUSTES DE SIMPLIFICACIÓN UI, SERVICIOS DESPLEGABLES, EXCEL Y FILTROS
+   ========================================================================== */
+
+/* 1. Permitir despliegue completo de Servicios dentro del panel derecho */
+.settlement-card {
+  overflow-y: auto !important;
+  justify-content: flex-start !important;
+  gap: 10px;
+}
+
+.services-panel-bottom {
+  flex: 0 0 auto !important;
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.services-list {
+  flex: 0 0 auto !important;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+/* 2. Calculadora de efectivo ultra-simple (una fila compacta) */
+.cash-calculator-compact {
+  padding: 9px 12px;
+  margin-bottom: 4px;
+}
+
+.calc-simple-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.calc-simple-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.calc-simple-field label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #334155;
+  white-space: nowrap;
+}
+
+.calc-simple-field .cash-input-wrap {
+  width: 110px;
+}
+
+.calc-simple-change {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.15;
+}
+
+.calc-simple-change span {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.calc-simple-change strong {
+  font-size: 16px;
+  font-weight: 800;
+  color: #16a34a;
+}
+
+/* 3. Inventario alineado + botón Excel */
+.inventory-header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.inv-subnav-inline {
+  margin-bottom: 0 !important;
+}
+
+.btn-inv-excel {
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+.btn-inv-excel:hover {
+  background: #d1fae5;
+  border-color: #6ee7b7;
+}
+
+/* 4. Filtros organizados y Excel por fecha en Historial de Ventas */
+.history-filters-organized {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.history-filters-organized .history-clean-search {
+  flex: 2 1 240px;
+}
+
+.history-filter-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.history-date-input {
+  height: 38px;
+  padding: 0 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #0f172a;
+  background: #ffffff;
+}
+
+.btn-clear-date {
+  height: 38px;
+  width: 32px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 18px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-history-export:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* 5. Corte de caja y Reportes simplificados */
+.cut-simple-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.cut-meta-pill {
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+.cut-meta-text {
+  font-size: 13px;
+  color: #475569;
+}
+
+.btn-rep-preset {
+  padding: 7px 14px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-rep-preset:hover {
+  border-color: var(--blue-primary);
+  color: var(--blue-primary);
+}
+
+.btn-rep-preset.active {
+  background: var(--blue-primary);
+  border-color: var(--blue-primary);
+  color: #ffffff;
+}
+
+.rep-filters-simple {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.rep-filter-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rep-filter-field label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.rep-filter-field input,
+.rep-filter-field select {
+  padding: 7px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 13px;
+  background: #ffffff;
+  color: #0f172a;
+}
+
+.rep-kpis-simple {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+}
+
+.rep-kpi-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+
+.rep-kpi-label {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.rep-kpi-value {
+  font-size: 22px;
+  font-weight: 800;
+  color: #0f172a;
+  margin-top: 4px;
+}
+
+.rep-kpi-sub {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+

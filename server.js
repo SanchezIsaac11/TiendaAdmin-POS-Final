@@ -76,7 +76,7 @@ app.use(express.static(path.join(__dirname, 'www'), { index: false }));
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
   if (req.method === 'OPTIONS') return res.sendStatus(200);
   next();
 });
@@ -793,6 +793,9 @@ app.get('/api/pos/version', (req, res) => {
 
 // 27. Módulo de Movimientos de Caja (Ingresos y Egresos) - Responsabilidad separada
 app.use('/api/pos', createCashMovementsRouter({ localDb, supabase, resolveRequestUser }));
+
+// 27B. Módulo de Promociones
+app.use('/api/promociones', require('./routes/promotions'));
 
 // 28. Impresión directa de ticket térmico desde navegador hacia impresora POS-58 en Windows
 app.post('/api/pos/print-ticket', async (req, res) => {

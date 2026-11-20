@@ -990,7 +990,21 @@ function processSale(payload, user) {
       cut = d.prepare('SELECT * FROM cash_cuts WHERE id = ?').get(Number(info.lastInsertRowid));
     }
 
-    // 1. Resolver productos y precios DESDE LA BASE DE DATOS
+    // 1. Resolver productos, precios y promociones activas DESDE LA BASE DE DATOS
+    let promoEngine = null;
+    try {
+      const hasPromosTable = d.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='promociones'").get();
+      promoEngine = require('../www/js/promotions');
+      if (promoEngine && typeof promoEngine.setPromotions === 'function') {
+        const activePromos = hasPromosTable
+          ? d.prepare('SELECT * FROM promociones WHERE activa = 1 ORDER BY id DESC').all()
+          : [];
+        promoEngine.setPromotions(activePromos);
+      }
+    } catch (_) {
+      promoEngine = null;
+    }
+
     const lines = [];
     let subtotalC = 0;
     let discountC = 0;
@@ -1018,24 +1032,37 @@ function processSale(payload, user) {
       const grossC = priceC * qty;
       let discC = 0;
       let promoLabel = null;
-      const promo = parsePromo(p.promo_rule);
-      if (promo) {
-        const promoType = promo.type || (promo.discount_percent !== undefined ? 'percentage' : 'bundle');
-        if (promoType === 'bundle' && promo.quantity >= 2) {
-          const bundles = Math.floor(qty / promo.quantity);
+      const legacyPromo = parsePromo(p.promo_rule);
+      if (promoEngine && typeof promoEngine.evaluateItem === 'function') {
+        const evalRes = promoEngine.evaluateItem({
+          barcode: p.barcode,
+          sku: p.sku,
+          category: p.category,
+          unitPrice: p.price,
+          quantity: qty,
+          promoRule: legacyPromo
+        });
+        if (evalRes && evalRes.discount > 0) {
+          discC = Math.max(0, Math.min(grossC, toCents(evalRes.discount)));
+          promoLabel = evalRes.badge || evalRes.nombre || null;
+        }
+      } else if (legacyPromo) {
+        const promoType = legacyPromo.type || (legacyPromo.discount_percent !== undefined ? 'percentage' : 'bundle');
+        if (promoType === 'bundle' && legacyPromo.quantity >= 2) {
+          const bundles = Math.floor(qty / legacyPromo.quantity);
           if (bundles > 0) {
-            const normalBundleCostC = bundles * promo.quantity * priceC;
-            const promoBundleCostC = bundles * toCents(promo.bundle_price);
+            const normalBundleCostC = bundles * legacyPromo.quantity * priceC;
+            const promoBundleCostC = bundles * toCents(legacyPromo.bundle_price);
             if (promoBundleCostC < normalBundleCostC) {
               discC = Math.max(0, Math.min(grossC, normalBundleCostC - promoBundleCostC));
-              promoLabel = promo.badge_text || `${promo.quantity}x$${promo.bundle_price}`;
+              promoLabel = legacyPromo.badge_text || `${legacyPromo.quantity}x$${legacyPromo.bundle_price}`;
             }
           }
         } else if (promoType === 'percentage' || promoType === 'percent') {
-          const pct = Number(promo.discount_percent ?? promo.percentage ?? 0);
+          const pct = Number(legacyPromo.discount_percent ?? legacyPromo.percentage ?? 0);
           if (pct > 0 && pct <= 100) {
             discC = Math.max(0, Math.min(grossC, Math.round(grossC * (pct / 100))));
-            promoLabel = promo.badge_text || `-${pct}%`;
+            promoLabel = legacyPromo.badge_text || `-${pct}%`;
           }
         }
       }

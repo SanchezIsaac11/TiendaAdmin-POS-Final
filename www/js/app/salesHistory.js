@@ -5,6 +5,7 @@
 
 const salesHistoryFilter = {
   search: '',
+  date: '',
   caja: 'all',
   payment: 'all',
   status: 'all'
@@ -17,6 +18,8 @@ function initSalesHistory() {
   const salesHistoryViewContainer = document.getElementById('salesHistoryViewContainer');
   const navSalesHistoryBtn = document.getElementById('navSalesHistoryBtn');
   const historySearchInput = document.getElementById('historySearchInput');
+  const historyDateInput = document.getElementById('historyDateInput');
+  const btnClearHistoryDate = document.getElementById('btnClearHistoryDate');
   const historyPaymentSelect = document.getElementById('historyPaymentSelect');
   const historyStatusSelect = document.getElementById('historyStatusSelect');
   const historyTableBody = document.getElementById('historyTableBody');
@@ -231,18 +234,43 @@ function initSalesHistory() {
     }
   }
 
-  function renderSalesHistory() {
-    updateSalesHistoryKPIs();
-    if (!historyTableBody) return;
+  function itemLocalIsoDate(item) {
+    if (item && item.created_at) {
+      const d = new Date(item.created_at);
+      if (!isNaN(d.getTime())) {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+      }
+    }
+    const raw = String((item && item.date) || '');
+    const mYmd = raw.match(/(\d{4})-(\d{2})-(\d{2})/);
+    if (mYmd) return `${mYmd[1]}-${mYmd[2]}-${mYmd[3]}`;
+    const mDmy = raw.match(/(\d{2})\/(\d{2})\/(\d{4})/);
+    if (mDmy) return `${mDmy[3]}-${mDmy[2]}-${mDmy[1]}`;
+    return '';
+  }
 
-    historyTableBody.innerHTML = '';
+  function updateExportButtonState() {
+    if (!btnExportSalesHistory) return;
+    const hasDate = !!salesHistoryFilter.date;
+    btnExportSalesHistory.disabled = !hasDate;
+    btnExportSalesHistory.title = hasDate
+      ? `Exportar ventas del ${salesHistoryFilter.date} a Excel`
+      : 'Selecciona una fecha para generar el Excel';
+  }
 
+  function getFilteredSalesList() {
     const list = Array.isArray(window.salesHistoryList) && window.salesHistoryList.length > 0
       ? window.salesHistoryList
       : ((window.PosDataService && window.PosDataService.getSalesHistory()) || []);
 
-    const filtered = list.filter(item => {
-      // Filtro de texto
+    return list.filter(item => {
+      if (salesHistoryFilter.date) {
+        if (itemLocalIsoDate(item) !== salesHistoryFilter.date) return false;
+      }
+
       if (salesHistoryFilter.search) {
         const q = salesHistoryFilter.search.toLowerCase();
         const matchFolio = (item.folio || '').toLowerCase().includes(q);
@@ -253,22 +281,23 @@ function initSalesHistory() {
         if (!matchFolio && !matchCashier && !matchCaja && !matchDetail && !matchSummary) return false;
       }
 
-      // Filtro de caja
       if (salesHistoryFilter.caja === 'caja1' && item.cajaCode !== 'C1' && item.cajaCode !== 'caja1') return false;
       if (salesHistoryFilter.caja === 'caja2' && item.cajaCode !== 'C2' && item.cajaCode !== 'caja2') return false;
-
-      // Filtro de método de pago
-      if (salesHistoryFilter.payment !== 'all' && item.paymentMethod !== salesHistoryFilter.payment) {
-        return false;
-      }
-
-      // Filtro de estado
-      if (salesHistoryFilter.status !== 'all' && item.status !== salesHistoryFilter.status) {
-        return false;
-      }
+      if (salesHistoryFilter.payment !== 'all' && item.paymentMethod !== salesHistoryFilter.payment) return false;
+      if (salesHistoryFilter.status !== 'all' && item.status !== salesHistoryFilter.status) return false;
 
       return true;
     });
+  }
+
+  function renderSalesHistory() {
+    updateSalesHistoryKPIs();
+    updateExportButtonState();
+    if (!historyTableBody) return;
+
+    historyTableBody.innerHTML = '';
+
+    const filtered = getFilteredSalesList();
 
     if (filtered.length === 0) {
       if (historyEmptyState) historyEmptyState.style.display = 'flex';
@@ -291,11 +320,6 @@ function initSalesHistory() {
 
       tr.innerHTML = `
         <td>
-          <a href="javascript:void(0)" class="ticket-folio-link" data-id="${item.id}" style="color: #2563eb; font-weight: 700; text-decoration: none;">
-            ${item.folio}
-          </a>
-        </td>
-        <td>
           <div style="display: flex; flex-direction: column;">
             <span style="font-weight: 600; color: #0f172a; font-size: 13px;">${item.date}</span>
             <span style="font-size: 11px; color: #64748b;">${item.timeAgo || 'Hoy'}</span>
@@ -306,7 +330,7 @@ function initSalesHistory() {
             <span class="badge-cashier-circle ${isC2 ? 'badge-c2' : 'badge-c1'}">${item.cajaCode || 'C1'}</span>
             <div class="cashier-info">
               <span class="cashier-box-name">${item.cajaName || 'Caja 1'}</span>
-              <span class="cashier-person-name">${item.cashier || 'Elena R.'}</span>
+              <span class="cashier-person-name">${item.cashier || 'Cajero'}</span>
             </div>
           </div>
         </td>
@@ -345,15 +369,6 @@ function initSalesHistory() {
         </td>
       `;
 
-      // Eventos para ver ticket
-      const folioLink = tr.querySelector('.ticket-folio-link');
-      if (folioLink) {
-        folioLink.addEventListener('click', (e) => {
-          e.preventDefault();
-          openTicketModal(item);
-        });
-      }
-
       const viewBtn = tr.querySelector('.btn-view-ticket');
       if (viewBtn) {
         viewBtn.addEventListener('click', () => {
@@ -383,6 +398,23 @@ function initSalesHistory() {
     });
   }
 
+  if (historyDateInput) {
+    historyDateInput.addEventListener('change', (e) => {
+      salesHistoryFilter.date = e.target.value || '';
+      if (btnClearHistoryDate) btnClearHistoryDate.style.display = salesHistoryFilter.date ? 'inline-flex' : 'none';
+      renderSalesHistory();
+    });
+  }
+
+  if (btnClearHistoryDate) {
+    btnClearHistoryDate.addEventListener('click', () => {
+      salesHistoryFilter.date = '';
+      if (historyDateInput) historyDateInput.value = '';
+      btnClearHistoryDate.style.display = 'none';
+      renderSalesHistory();
+    });
+  }
+
   cajaPills.forEach(pill => {
     pill.addEventListener('click', () => {
       cajaPills.forEach(p => p.classList.remove('active'));
@@ -407,35 +439,35 @@ function initSalesHistory() {
   }
 
   if (btnExportSalesHistory) {
+    updateExportButtonState();
     btnExportSalesHistory.addEventListener('click', () => {
-      const list = Array.isArray(window.salesHistoryList) && window.salesHistoryList.length > 0
-        ? window.salesHistoryList
-        : ((window.PosDataService && window.PosDataService.getSalesHistory()) || []);
-      if (list.length === 0) {
-        showModal('Historial Vacío', 'No hay registros de ventas para exportar.');
+      if (!salesHistoryFilter.date) {
+        showModal('Selecciona una fecha', 'Elige una fecha en el filtro para generar el archivo de Excel.');
         return;
       }
-      const headers = ['Folio', 'Fecha/Hora', 'Caja', 'Cajero', 'Artículos', 'Método de Pago', 'Total', 'Estado'];
+      const list = getFilteredSalesList();
+      if (list.length === 0) {
+        showModal('Sin Ventas', `No hay ventas registradas para el día ${salesHistoryFilter.date}.`);
+        return;
+      }
+      const headers = ['Fecha/Hora', 'Caja', 'Cajero', 'Artículos', 'Método de Pago', 'Total', 'Estado'];
       const rows = list.map(t => [
-        `"${t.folio}"`,
-        `"${t.date} (${t.timeAgo || ''})"`,
-        `"${t.cajaName || t.cajaCode || 'Caja 1'}"`,
-        `"${t.cashier || 'Cajero'}"`,
-        `"${((t.itemsDetail || t.itemsSummary || '')).replace(/"/g, '""')}"`,
-        `"${t.paymentMethod || 'cash'}"`,
-        (parseFloat(t.total) || 0).toFixed(2),
-        `"${t.status || 'completed'}"`
+        `${t.date || ''} ${t.timeAgo ? `(${t.timeAgo})` : ''}`.trim(),
+        t.cajaName || t.cajaCode || 'Caja 1',
+        t.cashier || 'Cajero',
+        t.itemsDetail || t.itemsSummary || '',
+        t.paymentMethod || 'Efectivo',
+        { value: parseFloat(t.total) || 0, currency: true },
+        t.status === 'cancelled' ? 'Cancelado' : 'Completado'
       ]);
-      const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\r\n');
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.setAttribute('href', url);
-      link.setAttribute('download', `reporte_ventas_nexus_${new Date().toISOString().slice(0, 10)}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      if (typeof window.exportToExcel === 'function') {
+        window.exportToExcel({
+          filename: `ventas_${salesHistoryFilter.date}`,
+          sheetName: 'Ventas',
+          headers,
+          rows
+        });
+      }
     });
   }
 

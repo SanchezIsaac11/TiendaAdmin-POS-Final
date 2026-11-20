@@ -843,9 +843,9 @@ function initCashMovements() {
     });
   }
 
-  // Exportar historial a CSV
+  // Exportar historial a Excel
   if (btnExportCsv) {
-    btnExportCsv.addEventListener('click', exportCashMovementsToCsv);
+    btnExportCsv.addEventListener('click', exportCashMovementsToExcel);
   }
 
   function populateFilterCategories(typeFilter) {
@@ -1026,9 +1026,9 @@ function renderCashMovements() {
 }
 
 /**
- * Exporta los movimientos actuales a archivo CSV
+ * Exporta los movimientos actuales a archivo Excel (.xls)
  */
-function exportCashMovementsToCsv() {
+function exportCashMovementsToExcel() {
   const allMovements = window.CashMovementsService.getAll();
   if (!allMovements || allMovements.length === 0) {
     if (typeof window.showModal === 'function') {
@@ -1041,29 +1041,27 @@ function exportCashMovementsToCsv() {
 
   const headers = ['ID', 'Tipo', 'Concepto', 'Categoría', 'Monto', 'Método de Pago', 'Fecha', 'Hora', 'Usuario', 'Caja', 'Notas'];
   const rows = allMovements.map(m => [
-    `"${m.id}"`,
-    `"${m.type === 'income' ? 'Ingreso' : 'Egreso'}"`,
-    `"${(m.concept || '').replace(/"/g, '""')}"`,
-    `"${(m.category || '').replace(/"/g, '""')}"`,
-    (parseFloat(m.amount) || 0).toFixed(2),
-    `"${m.payment_method === 'cash' ? 'Efectivo' : (m.payment_method === 'transfer' ? 'Transferencia' : 'Otro')}"`,
-    `"${m.date || ''}"`,
-    `"${m.time || ''}"`,
-    `"${(m.user || '').replace(/"/g, '""')}"`,
-    `"${(m.caja || '').replace(/"/g, '""')}"`,
-    `"${(m.notes || '').replace(/"/g, '""')}"`
+    m.id || '',
+    m.type === 'income' ? 'Ingreso' : 'Egreso',
+    m.concept || '',
+    m.category || '',
+    { value: parseFloat(m.amount) || 0, currency: true },
+    m.payment_method === 'cash' ? 'Efectivo' : (m.payment_method === 'transfer' ? 'Transferencia' : 'Otro'),
+    m.date || '',
+    m.time || '',
+    m.user || '',
+    m.caja || '',
+    m.notes || ''
   ]);
 
-  const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\r\n');
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `movimientos_ingresos_egresos_${new Date().toISOString().split('T')[0]}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  if (typeof window.exportToExcel === 'function') {
+    window.exportToExcel({
+      filename: `movimientos_caja_${new Date().toISOString().split('T')[0]}`,
+      sheetName: 'Ingresos y Egresos',
+      headers,
+      rows
+    });
+  }
 }
 
 function escapeHtml(str) {
@@ -1077,7 +1075,8 @@ function escapeHtml(str) {
 
 window.initCashMovements = initCashMovements;
 window.renderCashMovements = renderCashMovements;
-window.exportCashMovementsToCsv = exportCashMovementsToCsv;
+window.exportCashMovementsToExcel = exportCashMovementsToExcel;
+window.exportCashMovementsToCsv = exportCashMovementsToExcel;
 
 // =============================================================================
 // PLANTILLA Y CARGADOR MODULAR DEL COMPONENTE HTML
@@ -1088,16 +1087,15 @@ const CASH_MOVEMENTS_TEMPLATE_FALLBACK = `
     <div class="movements-header">
       <div class="movements-title-wrap">
         <h2 class="movements-title">Ingresos y Egresos</h2>
-        <p class="movements-sub">Registro y control de entradas y salidas de dinero adicionales a las ventas</p>
       </div>
       <div class="movements-header-actions">
-        <button type="button" class="btn-clean-export" id="btnExportMovementsCsv" title="Exportar movimientos a formato CSV">
+        <button type="button" class="btn-clean-export" id="btnExportMovementsCsv" title="Exportar movimientos a archivo Excel">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 15px; height: 15px;">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
             <polyline points="7 10 12 15 17 10"></polyline>
             <line x1="12" y1="15" x2="12" y2="3"></line>
           </svg>
-          <span>Exportar CSV</span>
+          <span>Exportar Excel</span>
         </button>
         <button type="button" class="btn-mov-action btn-mov-primary" id="btnNewMovement" onclick="if (typeof window.openNewMovementModal === 'function') { window.openNewMovementModal('income'); }">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width: 16px; height: 16px;">

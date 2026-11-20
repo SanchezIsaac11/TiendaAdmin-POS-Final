@@ -9,6 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,400&family=Caveat:wght@500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/promotions.css">
 </head>
 <body>
   <!-- =========================================================================
@@ -340,6 +341,15 @@
                 <span>Inventario</span>
               </a>
             </li>
+            <li class="admin-only-nav">
+              <a href="javascript:void(0)" class="nav-link" id="navPromotionsBtn" data-view="promotions" onclick="window.switchView('promotions'); return false;">
+                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+                  <line x1="7" y1="7" x2="7.01" y2="7"></line>
+                </svg>
+                <span>Promociones</span>
+              </a>
+            </li>
             <li>
               <a href="javascript:void(0)" class="nav-link" id="navSalesHistoryBtn" data-view="sales-history" onclick="window.switchView('sales-history'); return false;">
                 <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -553,24 +563,20 @@
               </div>
             </div>
 
-            <!-- Calculadoras de Efectivo / Mixto justo debajo de seleccionar el método -->
-            <div class="cash-calculator" id="cashCalculator" style="display: none;">
-              <div class="calc-row">
-                <label for="cashReceivedInput">Efectivo recibido:</label>
-                <div class="cash-input-wrap">
-                  <span>$</span>
-                  <input type="number" id="cashReceivedInput" placeholder="0.00" step="any">
+            <!-- Calculadoras de Efectivo / Mixto simplificadas -->
+            <div class="cash-calculator cash-calculator-compact" id="cashCalculator">
+              <div class="calc-simple-row">
+                <div class="calc-simple-field">
+                  <label for="cashReceivedInput">Recibido:</label>
+                  <div class="cash-input-wrap">
+                    <span>$</span>
+                    <input type="number" id="cashReceivedInput" placeholder="0.00" step="any">
+                  </div>
                 </div>
-              </div>
-              <div class="quick-bills">
-                <button type="button" class="btn-bill" data-amount="exact">Exacto</button>
-                <button type="button" class="btn-bill" data-amount="250">$250</button>
-                <button type="button" class="btn-bill" data-amount="300">$300</button>
-                <button type="button" class="btn-bill" data-amount="500">$500</button>
-              </div>
-              <div class="change-display">
-                <span>Cambio a devolver:</span>
-                <strong id="changeAmount">$0.00</strong>
+                <div class="calc-simple-change">
+                  <span>Cambio</span>
+                  <strong id="changeAmount">$0.00</strong>
+                </div>
               </div>
             </div>
 
@@ -706,13 +712,20 @@
       </div>
 
       <!-- 3. INVENTARIO VIEW -->
-      <!-- 3. INVENTARIO VIEW -->
       <main class="inventory-view-container" id="inventoryViewContainer" style="display: none;">
         <div class="inventory-card">
-          <!-- Top Row: Title + Simplified Action Dropdown -->
+          <!-- Top Row: Title + Subnav + Essential Actions -->
           <div class="inventory-header">
-            <div style="display: flex; align-items: center; gap: 12px;">
+            <div class="inventory-header-left">
               <h2 class="inventory-title">Inventario</h2>
+              <div class="inv-subnav-tabs inv-subnav-inline">
+                <button type="button" class="inv-subnav-tab active" id="tabInvCatalog">
+                  Productos
+                </button>
+                <button type="button" class="inv-subnav-tab" id="tabInvShrinkage">
+                  Mermas
+                </button>
+              </div>
             </div>
 
             <div class="inventory-actions-group">
@@ -725,73 +738,19 @@
                 <span>+ Nuevo Producto</span>
               </button>
 
-              <!-- Menú Desplegable Simplificado -->
-              <div class="inv-dropdown-wrap">
-                <button type="button" class="btn-inv-dropdown-toggle" id="btnInvDropdown" aria-haspopup="true" aria-expanded="false" title="Opciones de inventario">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 17px; height: 17px;">
-                    <circle cx="12" cy="12" r="3"></circle>
-                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-                  </svg>
-                  <span>Acciones ▾</span>
-                </button>
+              <button type="button" class="btn-inv btn-inv-excel" id="btnExportInventory" title="Generar archivo de Excel con el inventario">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="7 10 12 15 17 10"></polyline>
+                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                <span>Generar Excel</span>
+              </button>
 
-                <div class="inv-dropdown-menu" id="invDropdownMenu" style="display: none;">
-                  <div class="inv-dropdown-item" id="btnMenuRecibir">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px; color: #2563eb; flex-shrink: 0;"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>
-                    <div>
-                      <strong>Recibir mercancía</strong>
-                      <div style="font-size: 11px; color: #64748b;">Escáner móvil o Factura XML (CFDI)</div>
-                    </div>
-                  </div>
-                  <div class="inv-dropdown-item" id="btnMenuEntrada">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px; color: #16a34a; flex-shrink: 0;"><path d="M12 5v14M5 12l7 7 7-7"></path></svg>
-                    <div>
-                      <strong>Entrada rápida por compra</strong>
-                      <div style="font-size: 11px; color: #64748b;">Añadir existencias a producto</div>
-                    </div>
-                  </div>
-                  <div class="inv-dropdown-divider"></div>
-                  <div class="inv-dropdown-item" id="btnMenuMerma">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px; color: #dc2626; flex-shrink: 0;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-                    <div>
-                      <strong>Registrar merma o desperdicio</strong>
-                      <div style="font-size: 11px; color: #64748b;">Caducado, dañado o pérdida</div>
-                    </div>
-                  </div>
-                  <div class="inv-dropdown-item" id="btnMenuVerMermas">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px; color: #d97706; flex-shrink: 0;"><rect x="3" y="3" width="18" height="18" rx="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
-                    <div>
-                      <strong>Ver tabla de mermas</strong>
-                      <div style="font-size: 11px; color: #64748b;">Pérdidas acumuladas y motivos</div>
-                    </div>
-                  </div>
-                  <div class="inv-dropdown-divider"></div>
-                  <div class="inv-dropdown-item" id="btnMenuExport">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px; color: #475569; flex-shrink: 0;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                    <div>
-                      <strong>Exportar catálogo a CSV</strong>
-                      <div style="font-size: 11px; color: #64748b;">Descarga compatible con Excel</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Botones ocultos para compatibilidad interna -->
               <button id="btnRecibirMercancia" style="display: none;"></button>
-              <button id="btnExportInventory" style="display: none;"></button>
               <button id="btnAjusteMerma" style="display: none;"></button>
               <button id="btnEntradaCompra" style="display: none;"></button>
             </div>
-          </div>
-
-          <!-- Subnav Tabs para alternar entre Catálogo y Mermas -->
-          <div class="inv-subnav-tabs">
-            <button type="button" class="inv-subnav-tab active" id="tabInvCatalog">
-              Catálogo de Productos
-            </button>
-            <button type="button" class="inv-subnav-tab" id="tabInvShrinkage">
-              Control de Mermas y Desperdicios
-            </button>
           </div>
 
           <!-- SECCIÓN 1: CATÁLOGO DE PRODUCTOS -->
@@ -937,17 +896,61 @@
         </div>
       </main>
 
+      <!-- 3B. PROMOCIONES VIEW -->
+      <main class="inventory-view-container" id="promotionsViewContainer" style="display: none;">
+        <div class="inventory-card">
+          <div class="inventory-header">
+            <h2 class="inventory-title">Promociones</h2>
+            <div class="inventory-actions-group">
+              <button type="button" class="btn-inv btn-inv-primary" id="btnNuevaPromo">
+                <span>+ Nueva promoción</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="promo-kpis">
+            <div class="promo-kpi"><div class="promo-kpi-label">Activas</div><div class="promo-kpi-value" id="promoKpiActive">0</div></div>
+            <div class="promo-kpi promo-kpi-live"><div class="promo-kpi-label">Vigentes hoy</div><div class="promo-kpi-value" id="promoKpiLive">0</div></div>
+            <div class="promo-kpi"><div class="promo-kpi-label">Programadas</div><div class="promo-kpi-value" id="promoKpiScheduled">0</div></div>
+            <div class="promo-kpi"><div class="promo-kpi-label">Vencidas</div><div class="promo-kpi-value" id="promoKpiExpired">0</div></div>
+          </div>
+
+          <div class="promo-toolbar">
+            <div class="promo-filters">
+              <button type="button" class="promo-filter-pill active" data-filter="todas">Todas</button>
+              <button type="button" class="promo-filter-pill" data-filter="vigentes">Vigentes</button>
+              <button type="button" class="promo-filter-pill" data-filter="programadas">Programadas</button>
+              <button type="button" class="promo-filter-pill" data-filter="vencidas">Vencidas</button>
+              <button type="button" class="promo-filter-pill" data-filter="inactivas">Inactivas</button>
+            </div>
+            <input type="text" class="promo-search" id="promoSearchInput" placeholder="Buscar promoción, producto o categoría..." autocomplete="off">
+          </div>
+
+          <div class="promo-table-wrap">
+            <table class="promo-table">
+              <thead>
+                <tr>
+                  <th>PROMOCIÓN</th>
+                  <th>APLICA A</th>
+                  <th>VIGENCIA</th>
+                  <th>ESTADO</th>
+                  <th style="text-align: right;">ACCIONES</th>
+                </tr>
+              </thead>
+              <tbody id="promoTableBody"></tbody>
+            </table>
+            <div class="promo-empty" id="promoEmpty"></div>
+          </div>
+        </div>
+      </main>
+
       <!-- 4. HISTORIAL DE VENTAS VIEW -->
-      <!-- 4. HISTORIAL DE VENTAS VIEW (LIMPIO Y VISUAL) -->
       <main class="sales-history-view-container" id="salesHistoryViewContainer" style="display: none;">
         <div class="history-card">
           <!-- Top Header -->
           <div class="history-header">
             <div class="history-title-wrap">
-              <div class="history-title-row">
-                <h2 class="history-title">Historial de Ventas</h2>
-              </div>
-              <p class="history-subtitle">Registro de transacciones en tiempo real</p>
+              <h2 class="history-title">Historial de Ventas</h2>
             </div>
 
             <div class="history-actions-group">
@@ -960,13 +963,13 @@
                 <span>Reimprimir Último Ticket</span>
               </button>
 
-              <button class="btn-history-export" id="btnExportSalesHistory" title="Exportar reporte de ventas">
+              <button class="btn-history-export" id="btnExportSalesHistory" disabled title="Selecciona una fecha para generar Excel">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                   <polyline points="7 10 12 15 17 10"></polyline>
                   <line x1="12" y1="15" x2="12" y2="3"></line>
                 </svg>
-                <span>Exportar CSV</span>
+                <span>Generar Excel</span>
               </button>
             </div>
           </div>
@@ -976,7 +979,7 @@
             <div class="history-kpi-card">
               <div class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px; color: #16a34a;"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg></div>
               <div class="kpi-info">
-                <h5>Ventas Totales Hoy</h5>
+                <h5>Ventas Totales</h5>
                 <span id="kpiHistorySalesTotal">$0.00</span>
               </div>
             </div>
@@ -998,14 +1001,19 @@
             </div>
           </div>
 
-          <!-- Barra de Filtros Simple y Limpia -->
-          <div class="history-clean-filters-bar">
+          <!-- Barra de Filtros Ordenada -->
+          <div class="history-clean-filters-bar history-filters-organized">
             <div class="history-clean-search">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="11" cy="11" r="8"></circle>
                 <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
               </svg>
-              <input type="text" id="historySearchInput" placeholder="Buscar por folio de ticket (#TK-...), cajero o producto..." autocomplete="off">
+              <input type="text" id="historySearchInput" placeholder="Buscar por producto o cajero..." autocomplete="off">
+            </div>
+
+            <div class="history-filter-group">
+              <input type="date" id="historyDateInput" class="history-date-input" title="Selecciona fecha para filtrar y generar Excel">
+              <button type="button" id="btnClearHistoryDate" class="btn-clear-date" style="display: none;" title="Quitar filtro de fecha">&times;</button>
             </div>
 
             <select id="historyStatusSelect" class="history-select-clean">
@@ -1020,16 +1028,14 @@
               <option value="card">Tarjeta</option>
               <option value="transfer">Transferencia</option>
               <option value="mixed">Mixto</option>
-              <option value="qr">Pago QR</option>
             </select>
           </div>
 
-          <!-- Transactions Table -->
+          <!-- Transactions Table (Sin columna FOLIO) -->
           <div class="history-table-wrap">
             <table class="history-table">
               <thead>
                 <tr>
-                  <th class="th-h-folio">FOLIO</th>
                   <th class="th-h-date">FECHA Y HORA</th>
                   <th class="th-h-cashier">CAJERO / CAJA</th>
                   <th class="th-h-articles">ARTÍCULOS</th>
@@ -1055,57 +1061,25 @@
         </div>
       </main>
 
-      <!-- 5. CORTE DE CAJA VIEW -->
+      <!-- 5. CORTE DE CAJA VIEW (Simplificado para tienda de abarrotes) -->
       <main class="cash-cut-view-container" id="cashCutViewContainer" style="display: none;">
-        <!-- Top Row: Title + Status + Action Buttons -->
+        <!-- Top Row: Title + Simple Info -->
         <div class="cut-header-row">
           <div class="cut-title-wrap">
             <h2 class="cut-title">Corte de Caja</h2>
-            <span class="badge-shift-status">
-              <span class="dot-shift-active"></span>
-              Turno en curso
-            </span>
           </div>
 
-          <div class="cut-header-actions">
-            <div class="cut-date-picker-btn" id="btnCutDateSelector">
-              <span id="cutCurrentDateLabel">Hoy, 02 de noviembre de 2026</span>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="6 9 12 15 18 9"></polyline>
-              </svg>
-            </div>
-
-            <button type="button" class="btn-cut-other-shift" id="btnCutOtherShift">
-              Ver otro turno
-            </button>
-          </div>
-        </div>
-
-        <!-- Shift Info Summary Bar -->
-        <div class="cut-shift-info-bar">
-          <div class="shift-info-item">
-            <span class="shift-info-label">Identificador</span>
-            <span class="shift-info-value" id="cutCajaName" style="font-weight: 700; color: #2563eb;">Caja 1</span>
-          </div>
-          <div class="shift-info-item">
-            <span class="shift-info-label">Apertura</span>
-            <span class="shift-info-value" id="cutAperturaTime">02/11/2026 · 08:00 hrs</span>
-          </div>
-          <div class="shift-info-item">
-            <span class="shift-info-label">Tiempo de turno</span>
-            <span class="shift-info-value" id="cutShiftDuration">6 h 27 min</span>
-          </div>
-          <div class="shift-info-item">
-            <span class="shift-info-label">Fondo inicial</span>
-            <span class="shift-info-value" id="cutInitialFund">$1,000.00</span>
+          <div class="cut-header-actions cut-simple-meta">
+            <span id="cutCajaName" class="cut-meta-pill">Caja 1</span>
+            <span id="cutCurrentDateLabel" class="cut-meta-text">--</span>
+            <span class="cut-meta-text">Fondo inicial: <strong id="cutInitialFund">$1,000.00</strong></span>
           </div>
         </div>
 
         <!-- Main Content Grid (2 Columns) -->
         <div class="cut-main-grid">
-          <!-- Left Column (Resumen de ventas + Movimientos de caja) -->
+          <!-- Left Column (Resumen de ventas + Movimientos) -->
           <div class="cut-cards-col">
-            <!-- Card 1: Resumen de ventas -->
             <div class="cut-card">
               <div class="cut-card-header">
                 <h3 class="cut-card-title">Resumen de ventas</h3>
@@ -1119,64 +1093,31 @@
                 <table class="cut-table">
                   <thead>
                     <tr>
-                      <th style="width: 45%;">MÉTODO DE PAGO</th>
-                      <th style="width: 25%; text-align: center;">VENTAS</th>
+                      <th style="width: 50%;">MÉTODO DE PAGO</th>
+                      <th style="width: 20%; text-align: center;">VENTAS</th>
                       <th style="width: 30%; text-align: right;">IMPORTE</th>
-                      <th style="display: none;">% DEL TOTAL</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr>
-                      <td>
-                        <span class="payment-item-cell">
-                          <span class="dot-cut dot-green"></span>
-                          <span>Efectivo</span>
-                        </span>
-                      </td>
+                      <td><span class="payment-item-cell"><span class="dot-cut dot-green"></span><span>Efectivo</span></span></td>
                       <td style="text-align: center;" id="cutCountCash">0</td>
                       <td style="text-align: right; font-weight: 600;" id="cutAmountCash">$0.00</td>
-                      <td style="display: none;">
-                        <span class="percent-text" id="cutPercentCash">0%</span>
-                      </td>
                     </tr>
                     <tr>
-                      <td>
-                        <span class="payment-item-cell">
-                          <span class="dot-cut dot-purple"></span>
-                          <span>Tarjeta</span>
-                        </span>
-                      </td>
+                      <td><span class="payment-item-cell"><span class="dot-cut dot-purple"></span><span>Tarjeta</span></span></td>
                       <td style="text-align: center;" id="cutCountCard">0</td>
                       <td style="text-align: right; font-weight: 600;" id="cutAmountCard">$0.00</td>
-                      <td style="display: none;">
-                        <span class="percent-text" id="cutPercentCard">0%</span>
-                      </td>
                     </tr>
                     <tr>
-                      <td>
-                        <span class="payment-item-cell">
-                          <span class="dot-cut dot-blue"></span>
-                          <span>Transferencia</span>
-                        </span>
-                      </td>
+                      <td><span class="payment-item-cell"><span class="dot-cut dot-blue"></span><span>Transferencia</span></span></td>
                       <td style="text-align: center;" id="cutCountTransfer">0</td>
                       <td style="text-align: right; font-weight: 600;" id="cutAmountTransfer">$0.00</td>
-                      <td style="display: none;">
-                        <span class="percent-text" id="cutPercentTransfer">0%</span>
-                      </td>
                     </tr>
                     <tr>
-                      <td>
-                        <span class="payment-item-cell">
-                          <span class="dot-cut dot-amber"></span>
-                          <span>Mixto</span>
-                        </span>
-                      </td>
+                      <td><span class="payment-item-cell"><span class="dot-cut dot-amber"></span><span>Mixto</span></span></td>
                       <td style="text-align: center;" id="cutCountMixed">0</td>
                       <td style="text-align: right; font-weight: 600;" id="cutAmountMixed">$0.00</td>
-                      <td style="display: none;">
-                        <span class="percent-text" id="cutPercentMixed">0%</span>
-                      </td>
                     </tr>
                   </tbody>
                   <tfoot>
@@ -1184,50 +1125,27 @@
                       <td>Total de ventas</td>
                       <td style="text-align: center;" id="cutFootTotalCount">0</td>
                       <td style="text-align: right;" id="cutFootTotalAmount">$0.00</td>
-                      <td style="display: none;"></td>
                     </tr>
                   </tfoot>
                 </table>
               </div>
             </div>
 
-            <!-- Card 2: Movimientos de caja -->
             <div class="cut-card">
-              <div class="cut-card-header" style="display: flex; justify-content: space-between; align-items: center;">
-                <h3 class="cut-card-title">Movimientos de caja</h3>
-                <a href="javascript:void(0)" onclick="window.switchView('cash-movements'); return false;" style="font-size: 12px; font-weight: 600; color: #0284c7; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
-                  <span>Inspeccionar ingresos/egresos</span>
-                  <span>&rarr;</span>
-                </a>
+              <div class="cut-card-header">
+                <h3 class="cut-card-title">Entradas y salidas de efectivo</h3>
               </div>
 
               <div class="cut-table-wrap">
                 <table class="cut-table">
-                  <thead>
-                    <tr>
-                      <th style="width: 50%;">CONCEPTO</th>
-                      <th style="width: 25%; text-align: center;">CANTIDAD</th>
-                      <th style="width: 25%; text-align: right;">IMPORTE</th>
-                    </tr>
-                  </thead>
                   <tbody>
                     <tr>
-                      <td>
-                        <span class="concept-cell">
-                          <span class="arrow-in">↑</span>
-                          <span>Total de ingresos</span>
-                        </span>
-                      </td>
+                      <td><span class="concept-cell"><span class="arrow-in">↑</span><span>Ingresos</span></span></td>
                       <td style="text-align: center;" id="cutMoveEntriesCount">0</td>
                       <td style="text-align: right;" class="amt-positive" id="cutMoveEntriesAmount">+ $0.00</td>
                     </tr>
                     <tr>
-                      <td>
-                        <span class="concept-cell">
-                          <span class="arrow-out">↓</span>
-                          <span>Total de egresos</span>
-                        </span>
-                      </td>
+                      <td><span class="concept-cell"><span class="arrow-out">↓</span><span>Egresos</span></span></td>
                       <td style="text-align: center;" id="cutMoveExitsCount">0</td>
                       <td style="text-align: right;" class="amt-negative" id="cutMoveExitsAmount">- $0.00</td>
                     </tr>
@@ -1237,165 +1155,244 @@
             </div>
           </div>
 
-          <!-- Right Column (Conteo de efectivo - WITHOUT DIFERENCIA as requested) -->
+          <!-- Right Column (Conteo de efectivo) -->
           <div class="cut-cards-col">
             <div class="cut-card cut-card-conteo">
               <div class="cut-card-header">
-                <h3 class="cut-card-title">Conteo de efectivo</h3>
+                <h3 class="cut-card-title">Conteo de caja</h3>
               </div>
 
-              <!-- Efectivo esperado -->
               <div class="expected-cash-box">
                 <div class="expected-cash-header">
-                  <span class="expected-cash-label">Efectivo esperado</span>
+                  <span class="expected-cash-label">Efectivo esperado en caja</span>
                   <span class="expected-cash-value" id="cutExpectedCash">$1,000.00</span>
                 </div>
-                <span class="expected-cash-hint">Fondo inicial + Ventas en efectivo + Ingresos en efectivo - Egresos en efectivo</span>
+                <span class="expected-cash-hint">Fondo + ventas en efectivo + entradas - salidas</span>
               </div>
 
-              <!-- Efectivo contado -->
               <div class="counted-cash-box">
-                <label for="inputEfectivoContado" class="counted-cash-label">Efectivo contado</label>
+                <label for="inputEfectivoContado" class="counted-cash-label">¿Cuánto efectivo cuentas?</label>
                 <div class="counted-input-wrap">
                   <span class="counted-symbol">$</span>
-                  <input type="text" id="inputEfectivoContado" class="counted-input" value="1,000.00" autocomplete="off">
+                  <input type="text" id="inputEfectivoContado" class="counted-input" value="1000.00" autocomplete="off">
                 </div>
               </div>
 
-              <!-- NOTA: Se eliminó completamente la sección de la diferencia a petición del usuario -->
-
-              <!-- Actions -->
               <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 8px;">
                 <button type="button" class="btn-close-shift" id="btnCerrarTurno">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
                     <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
                   </svg>
-                  <span>Cerrar turno y generar corte</span>
+                  <span>Cerrar turno y hacer corte</span>
                 </button>
 
-                <div class="cut-secondary-actions">
-                  <button type="button" class="btn-cut-action-secondary" id="btnCutPreview">Vista previa</button>
-                  <button type="button" class="btn-cut-action-secondary" id="btnCutCancel">Cancelar</button>
-                </div>
+                <button type="button" class="btn-cut-action-secondary" id="btnCutPreview">Vista previa del corte</button>
               </div>
             </div>
           </div>
         </div>
       </main>
 
-      <!-- 5. MÓDULO DE INGRESOS Y EGRESOS (Definido y llamado desde cashMovements/cashMovements.html) -->
+      <!-- 5. MÓDULO DE INGRESOS Y EGRESOS -->
       <div id="cashMovementsMount"></div>
 
-      <!-- 6. REPORTES DE CORTES HISTÓRICOS VIEW -->
-      <main class="reports-view-container" id="reportsViewContainer" style="display: none; padding: 24px; flex-direction: column; gap: 20px; width: 100%; overflow-y: auto;">
-        <!-- Top Header -->
+      <!-- 6. REPORTES DE CAJA (Simplificado, menos clics) -->
+      <main class="reports-view-container" id="reportsViewContainer" style="display: none; padding: 24px; flex-direction: column; gap: 16px; width: 100%; overflow-y: auto;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-          <div>
-            <h2 style="font-size: 22px; font-weight: 700; color: #0f172a; margin: 0;">Reportes de Cortes de Caja</h2>
-            <p style="font-size: 13px; color: #64748b; margin: 4px 0 0 0;">Consulta y acumulados de cortes históricos guardados en Supabase</p>
-          </div>
-          <div style="display: flex; gap: 8px;">
-            <button type="button" class="btn-rep-preset" id="btnPresetToday" style="padding: 6px 12px; background: #fff; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer;">Hoy</button>
-            <button type="button" class="btn-rep-preset" id="btnPreset7Days" style="padding: 6px 12px; background: #fff; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer;">Últimos 7 días</button>
-            <button type="button" class="btn-rep-preset" id="btnPresetMonth" style="padding: 6px 12px; background: #fff; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer;">Este mes</button>
+          <h2 style="font-size: 24px; font-weight: 800; color: #0f172a; margin: 0;">Reportes de Caja</h2>
+
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <button type="button" class="btn-rep-preset" id="btnPresetToday">Hoy</button>
+            <button type="button" class="btn-rep-preset active" id="btnPreset7Days">Últimos 7 días</button>
+            <button type="button" class="btn-rep-preset" id="btnPresetMonth">Este mes</button>
+            <button type="button" class="btn-inv btn-inv-excel" id="btnExportReportsExcel" style="margin-left: 6px;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 15px; height: 15px;">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              <span>Generar Excel</span>
+            </button>
           </div>
         </div>
 
-        <!-- Filters Bar -->
-        <div style="background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap;">
-          <div style="display: flex; flex-direction: column; gap: 4px;">
-            <label for="repFilterStartDate" style="font-size: 12px; font-weight: 700; color: #475569;">FECHA INICIAL</label>
-            <input type="date" id="repFilterStartDate" style="padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;">
+        <!-- Filtros simples con recarga automática -->
+        <div class="rep-filters-simple">
+          <div class="rep-filter-field">
+            <label for="repFilterStartDate">Desde</label>
+            <input type="date" id="repFilterStartDate">
           </div>
-          <div style="display: flex; flex-direction: column; gap: 4px;">
-            <label for="repFilterEndDate" style="font-size: 12px; font-weight: 700; color: #475569;">FECHA FINAL</label>
-            <input type="date" id="repFilterEndDate" style="padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px;">
+          <div class="rep-filter-field">
+            <label for="repFilterEndDate">Hasta</label>
+            <input type="date" id="repFilterEndDate">
           </div>
-          <div style="display: flex; flex-direction: column; gap: 4px;">
-            <label for="repFilterTerminal" style="font-size: 12px; font-weight: 700; color: #475569;">CAJA</label>
-            <select id="repFilterTerminal" style="padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; min-width: 170px;">
-              <option value="all">Todas las Cajas (Ambas)</option>
+          <div class="rep-filter-field">
+            <label for="repFilterTerminal">Caja</label>
+            <select id="repFilterTerminal">
+              <option value="all">Todas las cajas</option>
               <option value="C1">Caja 1</option>
               <option value="C2">Caja 2</option>
             </select>
           </div>
-          <button type="button" id="btnRunReports" style="background: #2563eb; color: #fff; border: none; border-radius: 6px; padding: 9px 20px; font-size: 13px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px;">
-            <svg style="width: 15px; height: 15px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-            <span>Consultar</span>
-          </button>
         </div>
 
-        <!-- Accumulated KPIs Grid -->
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
-          <div style="background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px;">
-            <div style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase;">Ventas Acumuladas</div>
-            <div id="kpiRepTotalSales" style="font-size: 22px; font-weight: 800; color: #0f172a; margin-top: 4px;">$0.00</div>
+        <!-- 4 Indicadores Claros -->
+        <div class="rep-kpis-simple">
+          <div class="rep-kpi-card">
+            <div class="rep-kpi-label">Total Vendido</div>
+            <div id="kpiRepTotalSales" class="rep-kpi-value">$0.00</div>
+            <div id="kpiRepTicketsCount" class="rep-kpi-sub">0 ventas</div>
           </div>
-          <div style="background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px;">
-            <div style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase;">Cortes Realizados</div>
-            <div id="kpiRepCutsCount" style="font-size: 22px; font-weight: 800; color: #2563eb; margin-top: 4px;">0</div>
+          <div class="rep-kpi-card">
+            <div class="rep-kpi-label">En Efectivo</div>
+            <div id="kpiRepCashSales" class="rep-kpi-value" style="color: #16a34a;">$0.00</div>
           </div>
-          <div style="background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px;">
-            <div style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase;">Total Tickets Vendidos</div>
-            <div id="kpiRepTicketsCount" style="font-size: 22px; font-weight: 800; color: #0f172a; margin-top: 4px;">0</div>
+          <div class="rep-kpi-card">
+            <div class="rep-kpi-label">Tarjeta / Transf.</div>
+            <div id="kpiRepElectronicSales" class="rep-kpi-value" style="color: #2563eb;">$0.00</div>
           </div>
-          <div style="background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px;">
-            <div style="font-size: 11px; font-weight: 700; color: #16a34a; text-transform: uppercase;">Efectivo Total</div>
-            <div id="kpiRepCashSales" style="font-size: 18px; font-weight: 700; color: #16a34a; margin-top: 4px;">$0.00</div>
-          </div>
-          <div style="background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px;">
-            <div style="font-size: 11px; font-weight: 700; color: #7c3aed; text-transform: uppercase;">Tarjeta Total</div>
-            <div id="kpiRepCardSales" style="font-size: 18px; font-weight: 700; color: #7c3aed; margin-top: 4px;">$0.00</div>
-          </div>
-          <div style="background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px;">
-            <div style="font-size: 11px; font-weight: 700; color: #0284c7; text-transform: uppercase;">Transferencia Total</div>
-            <div id="kpiRepTransferSales" style="font-size: 18px; font-weight: 700; color: #0284c7; margin-top: 4px;">$0.00</div>
-          </div>
-          <div style="background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px;">
-            <div style="font-size: 11px; font-weight: 700; color: #d97706; text-transform: uppercase;">Pagos Mixtos</div>
-            <div id="kpiRepMixedSales" style="font-size: 18px; font-weight: 700; color: #d97706; margin-top: 4px;">$0.00</div>
-          </div>
-          <div style="background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px;">
-            <div style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase;">Entradas / Salidas</div>
-            <div style="font-size: 13px; font-weight: 700; margin-top: 4px;">
-              <span id="kpiRepInflows" style="color: #16a34a;">+$0.00</span> / <span id="kpiRepOutflows" style="color: #dc2626;">-$0.00</span>
-            </div>
-          </div>
-          <div style="background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px;">
-            <div style="font-size: 11px; font-weight: 700; color: #0f172a; text-transform: uppercase;">Efectivo Contado Total</div>
-            <div id="kpiRepCountedCash" style="font-size: 18px; font-weight: 800; color: #0f172a; margin-top: 4px;">$0.00</div>
+          <div class="rep-kpi-card">
+            <div class="rep-kpi-label">Efectivo Contado</div>
+            <div id="kpiRepCountedCash" class="rep-kpi-value">$0.00</div>
+            <div id="kpiRepCutsCount" class="rep-kpi-sub">0 cortes</div>
           </div>
         </div>
 
-        <!-- Table of Cuts -->
+        <!-- Tabla limpia de cortes -->
         <div id="reportsTableWrapper" style="background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
-          <div style="overflow-x: auto;">
-            <table class="inventory-table" style="width: 100%; border-collapse: collapse;">
-              <thead>
-                <tr style="background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
-                  <th style="padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 700; color: #475569;">FOLIO</th>
-                  <th style="padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 700; color: #475569;">CAJA</th>
-                  <th style="padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 700; color: #475569;">APERTURA</th>
-                  <th style="padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 700; color: #475569;">CIERRE</th>
-                  <th style="padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 700; color: #475569;">CAJERO</th>
-                  <th style="padding: 10px 14px; text-align: center; font-size: 11px; font-weight: 700; color: #475569;">VENTAS</th>
-                  <th style="padding: 10px 14px; text-align: right; font-size: 11px; font-weight: 700; color: #475569;">IMPORTE TOTAL</th>
-                  <th style="padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 700; color: #475569;">DESGLOSE PAGO</th>
-                  <th style="padding: 10px 14px; text-align: right; font-size: 11px; font-weight: 700; color: #475569;">FONDO INIC.</th>
-                  <th style="padding: 10px 14px; text-align: right; font-size: 11px; font-weight: 700; color: #475569;">ESPERADO</th>
-                  <th style="padding: 10px 14px; text-align: right; font-size: 11px; font-weight: 700; color: #475569;">CONTADO</th>
-                  <th style="padding: 10px 14px; text-align: center; font-size: 11px; font-weight: 700; color: #475569;">ESTADO</th>
-                  <th style="padding: 10px 14px; text-align: center; font-size: 11px; font-weight: 700; color: #475569;">ACCIÓN</th>
-                </tr>
-              </thead>
-              <tbody id="reportsTableBody"></tbody>
-            </table>
-          </div>
+          <table class="inventory-table" style="width: 100%; border-collapse: collapse;">
+            <thead>
+              <tr style="background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
+                <th style="padding: 11px 14px; text-align: left; font-size: 11px; font-weight: 700; color: #475569;">FECHA / HORA</th>
+                <th style="padding: 11px 14px; text-align: left; font-size: 11px; font-weight: 700; color: #475569;">CAJA / CAJERO</th>
+                <th style="padding: 11px 14px; text-align: center; font-size: 11px; font-weight: 700; color: #475569;">VENTAS</th>
+                <th style="padding: 11px 14px; text-align: right; font-size: 11px; font-weight: 700; color: #475569;">TOTAL VENDIDO</th>
+                <th style="padding: 11px 14px; text-align: right; font-size: 11px; font-weight: 700; color: #475569;">CONTADO</th>
+                <th style="padding: 11px 14px; text-align: center; font-size: 11px; font-weight: 700; color: #475569;">ESTADO / VER</th>
+              </tr>
+            </thead>
+            <tbody id="reportsTableBody"></tbody>
+          </table>
         </div>
 
         <div id="reportsEmptyState" style="display: none; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px;"></div>
       </main>
+    </div>
+
+    <!-- MODAL: NUEVA / EDITAR PROMOCIÓN -->
+    <div id="modalPromoForm" class="modal-backdrop" style="display: none;">
+      <div class="modal-dialog modal-dialog-form">
+        <div class="modal-dialog-header">
+          <h3 id="promoFormTitle">Nueva promoción</h3>
+          <button type="button" class="btn-close-modal" id="btnClosePromoForm">&times;</button>
+        </div>
+        <form id="promoForm">
+          <input type="hidden" id="promoFormId">
+
+          <div class="form-group">
+            <label for="promoFormNombre">Nombre de la promoción *</label>
+            <input type="text" id="promoFormNombre" required placeholder="Ej. Coca-Cola 3 x $45">
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="promoFormTipo">Tipo de descuento</label>
+              <select id="promoFormTipo">
+                <option value="bundle">Paquete (Lleva N por $X)</option>
+                <option value="nxm">Lleva N y paga M (2x1, 3x2)</option>
+                <option value="percent">% de descuento</option>
+                <option value="monto">$ de descuento por pieza</option>
+                <option value="volume">Precio de mayoreo por volumen</option>
+              </select>
+            </div>
+            <div class="form-group flex-1">
+              <label for="promoFormAlcance">Aplica a</label>
+              <select id="promoFormAlcance">
+                <option value="producto">Un producto</option>
+                <option value="categoria">Una categoría</option>
+                <option value="todo">Toda la tienda</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group" id="promoGrpProducto">
+            <label for="promoFormProducto">Producto *</label>
+            <select id="promoFormProducto"></select>
+          </div>
+
+          <div class="form-group" id="promoGrpCategoria" style="display: none;">
+            <label for="promoFormCategoria">Categoría *</label>
+            <select id="promoFormCategoria"></select>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-1" id="promoGrpCantidad">
+              <label for="promoFormCantidad" id="promoLblCantidad">Piezas</label>
+              <input type="number" id="promoFormCantidad" min="1" step="1" value="2">
+            </div>
+            <div class="form-group flex-1" id="promoGrpPaga" style="display: none;">
+              <label for="promoFormPaga">Paga (piezas)</label>
+              <input type="number" id="promoFormPaga" min="1" step="1" value="1">
+            </div>
+            <div class="form-group flex-1" id="promoGrpPrecio">
+              <label for="promoFormPrecio" id="promoLblPrecio">Precio ($)</label>
+              <input type="number" id="promoFormPrecio" min="0" step="0.01" placeholder="0.00">
+            </div>
+            <div class="form-group flex-1" id="promoGrpPorcentaje" style="display: none;">
+              <label for="promoFormPorcentaje">Descuento (%)</label>
+              <input type="number" id="promoFormPorcentaje" min="1" max="100" step="1" placeholder="10">
+            </div>
+          </div>
+
+          <div class="promo-section-title">Vigencia (opcional)</div>
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="promoFormFechaInicio">Fecha inicio</label>
+              <input type="date" id="promoFormFechaInicio">
+            </div>
+            <div class="form-group flex-1">
+              <label for="promoFormFechaFin">Fecha fin</label>
+              <input type="date" id="promoFormFechaFin">
+            </div>
+          </div>
+
+          <div class="promo-days">
+            <label><input type="checkbox" class="promo-day" value="1"> Lun</label>
+            <label><input type="checkbox" class="promo-day" value="2"> Mar</label>
+            <label><input type="checkbox" class="promo-day" value="3"> Mié</label>
+            <label><input type="checkbox" class="promo-day" value="4"> Jue</label>
+            <label><input type="checkbox" class="promo-day" value="5"> Vie</label>
+            <label><input type="checkbox" class="promo-day" value="6"> Sáb</label>
+            <label><input type="checkbox" class="promo-day" value="0"> Dom</label>
+          </div>
+          <div class="promo-hint">Si no marcas días ni fechas, aplica todos los días.</div>
+
+          <div class="form-row" style="margin-top: 10px;">
+            <div class="form-group flex-1">
+              <label for="promoFormHoraInicio">Hora inicio</label>
+              <input type="time" id="promoFormHoraInicio">
+            </div>
+            <div class="form-group flex-1">
+              <label for="promoFormHoraFin">Hora fin</label>
+              <input type="time" id="promoFormHoraFin">
+            </div>
+          </div>
+
+          <label class="promo-check-row">
+            <input type="checkbox" id="promoFormActiva" checked>
+            <span>Promoción activa</span>
+          </label>
+
+          <div id="promoFormPreview" class="promo-preview"></div>
+          <div id="promoFormError" class="promo-error"></div>
+
+          <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px;">
+            <button type="button" class="btn-ghost-modal" id="btnCancelPromoForm">Cancelar</button>
+            <button type="submit" class="btn-primary-modal" id="btnSavePromoForm" style="background: #2563eb; color: #fff; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 700; cursor: pointer;">Crear promoción</button>
+          </div>
+        </form>
+      </div>
     </div>
 
     <!-- MODAL: APERTURA DE TURNO -->
@@ -1849,12 +1846,15 @@
   <!-- Client Data Logic -->
   <script src="js/cashMovements/cashMovementsClient.js"></script>
   <script src="js/supabaseClient.js"></script>
+  <!-- Módulo Compartido de Exportación a Excel (.xls) -->
+  <script src="js/app/excelExport.js"></script>
   <!-- Módulo de Impresión de Tickets (debe cargarse antes que salesHistory.js y posPayments.js) -->
   <script src="js/app/printTicket.js"></script>
   <!-- Main Application Logic (Modular) -->
   <script src="js/app/app.js"></script>
   <script src="js/app/login.js"></script>
   <script src="js/app/inventory.js"></script>
+  <script src="js/promotions.js"></script>
   <script src="js/app/salesHistory.js"></script>
   <script src="js/app/cashMovements.js"></script>
   <script src="js/app/cutCash.js"></script>

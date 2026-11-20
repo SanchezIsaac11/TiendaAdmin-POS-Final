@@ -43,7 +43,7 @@ var getProductIconSvg = function(i) { if (window.getProductIconSvg && window.get
 
 // Función global de cambio de vista
 window.switchView = function(viewName) {
-  if (viewName === 'inventory' || viewName === 'cash-cut' || viewName === 'reports' || viewName === 'cash-movements') {
+  if (viewName === 'inventory' || viewName === 'promotions' || viewName === 'cash-cut' || viewName === 'reports' || viewName === 'cash-movements') {
     if (window.currentSessionUser && window.currentSessionUser.role === 'cajero') {
       if (typeof window.requestAdminAuth === 'function') {
         window.requestAdminAuth(() => executeSwitchView(viewName));
@@ -62,12 +62,14 @@ function executeSwitchView(viewName) {
 
   const posViewContainer = document.getElementById('posViewContainer');
   const inventoryViewContainer = document.getElementById('inventoryViewContainer');
+  const promotionsViewContainer = document.getElementById('promotionsViewContainer');
   const salesHistoryViewContainer = document.getElementById('salesHistoryViewContainer');
   const cashCutViewContainer = document.getElementById('cashCutViewContainer');
   const cashMovementsViewContainer = document.getElementById('cashMovementsViewContainer');
   const reportsViewContainer = document.getElementById('reportsViewContainer');
   const navPosBtn = document.getElementById('navPosBtn');
   const navInventoryBtn = document.getElementById('navInventoryBtn');
+  const navPromotionsBtn = document.getElementById('navPromotionsBtn');
   const navSalesHistoryBtn = document.getElementById('navSalesHistoryBtn');
   const navCashCutBtn = document.getElementById('navCashCutBtn');
   const navCashMovementsBtn = document.getElementById('navCashMovementsBtn');
@@ -81,6 +83,7 @@ function executeSwitchView(viewName) {
 
   if (viewName === 'inventory') {
     if (posViewContainer) posViewContainer.style.display = 'none';
+    if (promotionsViewContainer) promotionsViewContainer.style.display = 'none';
     if (salesHistoryViewContainer) salesHistoryViewContainer.style.display = 'none';
     if (cashCutViewContainer) cashCutViewContainer.style.display = 'none';
     if (cashMovementsViewContainer) cashMovementsViewContainer.style.display = 'none';
@@ -95,9 +98,22 @@ function executeSwitchView(viewName) {
     }
     const invSearchInput = document.getElementById('invSearchInput');
     if (invSearchInput) invSearchInput.focus();
+  } else if (viewName === 'promotions') {
+    if (posViewContainer) posViewContainer.style.display = 'none';
+    if (inventoryViewContainer) inventoryViewContainer.style.display = 'none';
+    if (salesHistoryViewContainer) salesHistoryViewContainer.style.display = 'none';
+    if (cashCutViewContainer) cashCutViewContainer.style.display = 'none';
+    if (cashMovementsViewContainer) cashMovementsViewContainer.style.display = 'none';
+    if (reportsViewContainer) reportsViewContainer.style.display = 'none';
+    if (promotionsViewContainer) promotionsViewContainer.style.display = 'flex';
+    if (navPromotionsBtn) navPromotionsBtn.classList.add('active', 'nav-active');
+    if (typeof window.renderPromotions === 'function') {
+      window.renderPromotions();
+    }
   } else if (viewName === 'sales-history') {
     if (posViewContainer) posViewContainer.style.display = 'none';
     if (inventoryViewContainer) inventoryViewContainer.style.display = 'none';
+    if (promotionsViewContainer) promotionsViewContainer.style.display = 'none';
     if (cashCutViewContainer) cashCutViewContainer.style.display = 'none';
     if (cashMovementsViewContainer) cashMovementsViewContainer.style.display = 'none';
     if (reportsViewContainer) reportsViewContainer.style.display = 'none';
@@ -114,6 +130,7 @@ function executeSwitchView(viewName) {
   } else if (viewName === 'cash-cut') {
     if (posViewContainer) posViewContainer.style.display = 'none';
     if (inventoryViewContainer) inventoryViewContainer.style.display = 'none';
+    if (promotionsViewContainer) promotionsViewContainer.style.display = 'none';
     if (salesHistoryViewContainer) salesHistoryViewContainer.style.display = 'none';
     if (cashMovementsViewContainer) cashMovementsViewContainer.style.display = 'none';
     if (reportsViewContainer) reportsViewContainer.style.display = 'none';
@@ -127,6 +144,7 @@ function executeSwitchView(viewName) {
   } else if (viewName === 'cash-movements') {
     if (posViewContainer) posViewContainer.style.display = 'none';
     if (inventoryViewContainer) inventoryViewContainer.style.display = 'none';
+    if (promotionsViewContainer) promotionsViewContainer.style.display = 'none';
     if (salesHistoryViewContainer) salesHistoryViewContainer.style.display = 'none';
     if (cashCutViewContainer) cashCutViewContainer.style.display = 'none';
     if (reportsViewContainer) reportsViewContainer.style.display = 'none';
@@ -155,6 +173,7 @@ function executeSwitchView(viewName) {
   } else if (viewName === 'reports') {
     if (posViewContainer) posViewContainer.style.display = 'none';
     if (inventoryViewContainer) inventoryViewContainer.style.display = 'none';
+    if (promotionsViewContainer) promotionsViewContainer.style.display = 'none';
     if (salesHistoryViewContainer) salesHistoryViewContainer.style.display = 'none';
     if (cashCutViewContainer) cashCutViewContainer.style.display = 'none';
     if (cashMovementsViewContainer) cashMovementsViewContainer.style.display = 'none';
@@ -166,6 +185,7 @@ function executeSwitchView(viewName) {
   } else {
     // POS View
     if (inventoryViewContainer) inventoryViewContainer.style.display = 'none';
+    if (promotionsViewContainer) promotionsViewContainer.style.display = 'none';
     if (salesHistoryViewContainer) salesHistoryViewContainer.style.display = 'none';
     if (cashCutViewContainer) cashCutViewContainer.style.display = 'none';
     if (cashMovementsViewContainer) cashMovementsViewContainer.style.display = 'none';
