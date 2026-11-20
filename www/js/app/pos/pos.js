@@ -183,6 +183,10 @@ function initPos() {
       const promoBadgeText = hasPromoApplied ? (evalPromo.badge || evalPromo.nombre || 'Promo') : '';
       const finalItemSubtotal = hasPromoApplied ? Math.max(0, rawSubtotal - evalPromo.discount) : rawSubtotal;
 
+      const isBulk = (item.saleType === 'bulk' || item.sale_type === 'bulk');
+      const qtyRounded = isBulk ? (Math.round((parseFloat(item.quantity) || 1) * 1000) / 1000) : (item.quantity || 1);
+      const qtyText = isBulk ? `${qtyRounded} kg` : `${qtyRounded}`;
+      const priceSuffix = isBulk ? '/kg' : 'c/u';
       const safeTitle = escapeHtml(item.name || '');
       const safeDisplay = escapeHtml(item.displayName || item.name || '');
       const safeBadge = escapeHtml(promoBadgeText);
@@ -194,7 +198,7 @@ function initPos() {
         <div class="item-details">
           <div class="item-title" title="${safeTitle}">${safeDisplay}</div>
           <div class="item-subtitle-row">
-            <span class="item-meta">$${item.unitPrice.toFixed(2)} c/u</span>
+            <span class="item-meta">$${item.unitPrice.toFixed(2)} ${priceSuffix}</span>
             ${hasPromoApplied ? `
               <span class="promo-badge">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -208,7 +212,7 @@ function initPos() {
 
         <div class="item-quantity-control">
           <button type="button" class="btn-qty btn-decrease" data-index="${index}">–</button>
-          <span class="qty-number">${item.quantity}</span>
+          <span class="qty-number">${qtyText}</span>
           <button type="button" class="btn-qty btn-increase" data-index="${index}">+</button>
         </div>
 
@@ -231,7 +235,9 @@ function initPos() {
     });
 
     if (itemsSummary) {
-      itemsSummary.textContent = `${totals.totalProducts} productos • ${totals.totalPieces} piezas`;
+      const hasBulkItem = state.cart.some(it => it.saleType === 'bulk' || it.sale_type === 'bulk');
+      const totalPiecesFmt = Number((totals.totalPieces || 0).toFixed(3));
+      itemsSummary.textContent = `${totals.totalProducts} productos • ${totalPiecesFmt} ${hasBulkItem ? 'pzas/kg' : 'piezas'}`;
     }
     if (state.ticketNote) {
       const noteRow = document.createElement('div');
@@ -282,20 +288,70 @@ function initPos() {
   const btnCancelCartQty = document.getElementById('btnCancelCartQty');
   const btnCloseCartQty = document.getElementById('btnCloseCartQty');
 
+  const UNIT_PRESETS = [
+    { val: '1', label: '1' }, { val: '2', label: '2' }, { val: '3', label: '3' }, { val: '5', label: '5' },
+    { val: '6', label: '6' }, { val: '10', label: '10' }, { val: '12', label: '12' }, { val: '24', label: '24' }
+  ];
+  const BULK_PRESETS = [
+    { val: '0.1', label: '100 g' }, { val: '0.25', label: '¼ kg' }, { val: '0.5', label: '½ kg' },
+    { val: '0.75', label: '¾ kg' }, { val: '1', label: '1 kg' }, { val: '1.5', label: '1.5 kg' },
+    { val: '2', label: '2 kg' }, { val: '5', label: '5 kg' }
+  ];
+
+  function updateQtyLivePreview() {
+    const liveBox = document.getElementById('cartQtyLiveTotal');
+    if (!liveBox || cartEditItemIndex < 0 || cartEditItemIndex >= state.cart.length) return;
+    const item = state.cart[cartEditItemIndex];
+    const isBulk = item && (item.saleType === 'bulk' || item.sale_type === 'bulk');
+    if (!isBulk) {
+      liveBox.style.display = 'none';
+      return;
+    }
+    const kg = Math.max(0, parseFloat(inputCartItemQty?.value) || 0);
+    const price = parseFloat(item.unitPrice != null ? item.unitPrice : item.price) || 0;
+    liveBox.textContent = `${kg} kg × $${price.toFixed(2)}/kg = $${(kg * price).toFixed(2)}`;
+    liveBox.style.display = 'block';
+  }
+
   function openCartQuantityModal(index) {
     if (index == null || index < 0 || index >= state.cart.length) return;
     cartEditItemIndex = index;
     const item = state.cart[index];
     if (!item) return;
 
+    const isBulk = (item.saleType === 'bulk' || item.sale_type === 'bulk');
+    const price = parseFloat(item.unitPrice != null ? item.unitPrice : item.price) || 0;
+
+    if (cartQtyModalTitle) cartQtyModalTitle.textContent = isBulk ? 'Peso a vender (kg)' : 'Editar Cantidad';
     if (cartQtyProductName) cartQtyProductName.textContent = item.displayName || item.name;
     if (cartQtyProductPrice) {
-      const price = parseFloat(item.unitPrice != null ? item.unitPrice : item.price) || 0;
-      cartQtyProductPrice.textContent = `$${price.toFixed(2)} c/u`;
+      cartQtyProductPrice.textContent = isBulk ? `$${price.toFixed(2)} / kg` : `$${price.toFixed(2)} c/u`;
     }
     if (inputCartItemQty) {
+      inputCartItemQty.step = isBulk ? 'any' : '1';
+      inputCartItemQty.min = isBulk ? '0.01' : '1';
       inputCartItemQty.value = item.quantity || 1;
     }
+
+    const presetsLabel = document.getElementById('cartQtyPresetsLabel');
+    const presetsGrid = document.getElementById('cartQtyPresetsGrid');
+    if (presetsLabel) presetsLabel.textContent = isBulk ? 'Atajos de peso:' : 'Atajos rápidos de piezas:';
+    if (presetsGrid) {
+      const list = isBulk ? BULK_PRESETS : UNIT_PRESETS;
+      presetsGrid.innerHTML = list.map(p => `<button type="button" class="btn-qty-preset" data-val="${p.val}">${p.label}</button>`).join('');
+      presetsGrid.querySelectorAll('.btn-qty-preset').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const v = parseFloat(btn.dataset.val);
+          if (!isNaN(v) && v > 0 && inputCartItemQty) {
+            inputCartItemQty.value = v;
+            updateQtyLivePreview();
+            inputCartItemQty.focus();
+          }
+        });
+      });
+    }
+
+    updateQtyLivePreview();
 
     if (modalCartItemQty) {
       modalCartItemQty.style.display = 'flex';
@@ -318,11 +374,13 @@ function initPos() {
       closeCartQuantityModal();
       return;
     }
-    const val = parseInt(inputCartItemQty.value, 10);
-    if (isNaN(val) || val <= 0) {
+    const item = state.cart[cartEditItemIndex];
+    const isBulk = item && (item.saleType === 'bulk' || item.sale_type === 'bulk');
+    const parsed = isBulk ? parseFloat(inputCartItemQty.value) : parseInt(inputCartItemQty.value, 10);
+    if (isNaN(parsed) || parsed <= 0) {
       state.cart.splice(cartEditItemIndex, 1);
     } else {
-      state.cart[cartEditItemIndex].quantity = val;
+      item.quantity = isBulk ? Math.round(parsed * 1000) / 1000 : parsed;
     }
     closeCartQuantityModal();
     renderCart();
@@ -330,29 +388,29 @@ function initPos() {
 
   if (btnCartQtyMinus) {
     btnCartQtyMinus.addEventListener('click', () => {
-      const cur = parseInt(inputCartItemQty.value, 10) || 1;
-      if (cur > 1) inputCartItemQty.value = cur - 1;
+      const item = state.cart[cartEditItemIndex];
+      const isBulk = item && (item.saleType === 'bulk' || item.sale_type === 'bulk');
+      const step = isBulk ? 0.25 : 1;
+      const cur = parseFloat(inputCartItemQty.value) || step;
+      const next = Math.max(isBulk ? 0.1 : 1, Math.round((cur - step) * 1000) / 1000);
+      inputCartItemQty.value = next;
+      updateQtyLivePreview();
     });
   }
 
   if (btnCartQtyPlus) {
     btnCartQtyPlus.addEventListener('click', () => {
-      const cur = parseInt(inputCartItemQty.value, 10) || 1;
-      inputCartItemQty.value = cur + 1;
+      const item = state.cart[cartEditItemIndex];
+      const isBulk = item && (item.saleType === 'bulk' || item.sale_type === 'bulk');
+      const step = isBulk ? 0.25 : 1;
+      const cur = parseFloat(inputCartItemQty.value) || 0;
+      inputCartItemQty.value = Math.round((cur + step) * 1000) / 1000;
+      updateQtyLivePreview();
     });
   }
 
-  document.querySelectorAll('.btn-qty-preset').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const v = parseInt(btn.dataset.val, 10);
-      if (v && inputCartItemQty) {
-        inputCartItemQty.value = v;
-        inputCartItemQty.focus();
-      }
-    });
-  });
-
   if (inputCartItemQty) {
+    inputCartItemQty.addEventListener('input', updateQtyLivePreview);
     inputCartItemQty.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
@@ -381,17 +439,26 @@ function initPos() {
       if (decBtn) {
         e.stopPropagation();
         const idx = parseInt(decBtn.dataset.index, 10);
-        if (state.cart[idx] && state.cart[idx].quantity > 1) {
-          state.cart[idx].quantity -= 1;
-        } else {
-          state.cart.splice(idx, 1);
+        const item = state.cart[idx];
+        if (item) {
+          const isBulk = (item.saleType === 'bulk' || item.sale_type === 'bulk');
+          const step = isBulk ? 0.25 : 1;
+          const next = Math.round(((parseFloat(item.quantity) || 0) - step) * 1000) / 1000;
+          if (next > 0) {
+            item.quantity = next;
+          } else {
+            state.cart.splice(idx, 1);
+          }
         }
         renderCart();
       } else if (incBtn) {
         e.stopPropagation();
         const idx = parseInt(incBtn.dataset.index, 10);
-        if (state.cart[idx]) {
-          state.cart[idx].quantity += 1;
+        const item = state.cart[idx];
+        if (item) {
+          const isBulk = (item.saleType === 'bulk' || item.sale_type === 'bulk');
+          const step = isBulk ? 0.25 : 1;
+          item.quantity = Math.round(((parseFloat(item.quantity) || 0) + step) * 1000) / 1000;
         }
         renderCart();
       } else if (remBtn) {
@@ -424,7 +491,9 @@ function initPos() {
       return;
     }
 
-    const qty = parseInt(quantity, 10) || 1;
+    const isBulk = (product.saleType === 'bulk' || product.sale_type === 'bulk');
+    const parsedQty = isBulk ? (parseFloat(quantity) || 1) : (parseInt(quantity, 10) || 1);
+    const qty = isBulk ? Math.round(parsedQty * 1000) / 1000 : parsedQty;
 
     // Normalización de identificadores para no duplicar items
     const pId = (product.id != null) ? String(product.id).trim() : '';
@@ -452,8 +521,10 @@ function initPos() {
       return false;
     });
 
+    let targetIndex = -1;
     if (existing) {
-      existing.quantity += qty;
+      existing.quantity = isBulk ? Math.round((existing.quantity + qty) * 1000) / 1000 : (existing.quantity + qty);
+      targetIndex = state.cart.indexOf(existing);
     } else {
       let rule = product.promoRule || product.promo_rule || null;
       if (typeof rule === 'string' && rule.trim().startsWith('{')) {
@@ -465,14 +536,22 @@ function initPos() {
         barcode: product.barcode || '',
         name: product.name,
         displayName: product.displayName || product.display_name || product.name,
+        category: product.category || 'Abarrotes',
+        saleType: isBulk ? 'bulk' : 'unit',
+        unitLabel: isBulk ? 'kg' : 'uds',
         unitPrice: parseFloat(product.price || product.unitPrice || product.unit_price || 0),
         quantity: qty,
         iconType: product.iconType || product.icon_type || 'bread',
         promoRule: rule
       });
+      targetIndex = state.cart.length - 1;
     }
     renderCart();
     if (cartItemsList) cartItemsList.scrollTop = cartItemsList.scrollHeight;
+    // Si es un producto suelto (kg), pedir peso inmediatamente al agregarlo
+    if (isBulk && targetIndex >= 0 && typeof openCartQuantityModal === 'function') {
+      openCartQuantityModal(targetIndex);
+    }
   }
 
   async function handleProductScan(code, quantity = 1) {

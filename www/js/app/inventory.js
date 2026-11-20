@@ -105,11 +105,15 @@ function initInventory() {
 
     filtered.forEach(item => {
       const tr = document.createElement('tr');
+      const isBulk = (item.saleType === 'bulk' || item.sale_type === 'bulk');
+      const unitLbl = item.unitLabel || item.unit_label || (isBulk ? 'kg' : 'uds');
+      const stockNum = parseFloat(item.stock) || 0;
+      const stockDisplay = isBulk ? Number(stockNum.toFixed(3)) : stockNum;
 
       let statusBadge = '';
-      if (item.stock <= 0) {
+      if (stockNum <= 0) {
         statusBadge = `<span class="badge-status badge-status-out"><span class="dot-status"></span>Agotado</span>`;
-      } else if (item.stock <= 5) {
+      } else if (stockNum <= 5) {
         statusBadge = `<span class="badge-status badge-status-low"><span class="dot-status"></span>Stock Bajo</span>`;
       } else {
         statusBadge = `<span class="badge-status badge-status-optimal"><span class="dot-status"></span>Óptimo</span>`;
@@ -126,18 +130,18 @@ function initInventory() {
         </td>
         <td>
           <div class="cell-product-info">
-            <span class="product-name">${item.name}</span>
+            <span class="product-name">${item.name}${isBulk ? ' <span style="display:inline-block;background:#fef3c7;color:#92400e;font-size:10.5px;font-weight:700;padding:1px 6px;border-radius:999px;margin-left:4px;vertical-align:middle;">A granel (kg)</span>' : ''}</span>
             <span class="product-category">${item.category}</span>
           </div>
         </td>
         <td>
-          <span class="cell-cost">$${parseFloat(item.cost).toFixed(2)}</span>
+          <span class="cell-cost">$${parseFloat(item.cost).toFixed(2)}${isBulk ? '<small style="color:#64748b;">/kg</small>' : ''}</span>
         </td>
         <td>
-          <span class="cell-price">$${parseFloat(item.price).toFixed(2)}</span>
+          <span class="cell-price">$${parseFloat(item.price).toFixed(2)}${isBulk ? '<small style="color:#64748b;">/kg</small>' : ''}</span>
         </td>
         <td>
-          <span class="cell-stock"><strong>${item.stock}</strong> <span class="stock-unit">uds</span></span>
+          <span class="cell-stock"><strong>${stockDisplay}</strong> <span class="stock-unit">${unitLbl}</span></span>
         </td>
         <td style="text-align: center;">
           ${statusBadge}
@@ -230,11 +234,38 @@ function initInventory() {
   // 7. MODALES Y FORMULARIOS DE INVENTARIO
   // =========================================================================
 
+  function syncProductSaleTypeFields() {
+    const saleTypeEl = document.getElementById('prodFormSaleType');
+    const isBulk = saleTypeEl && saleTypeEl.value === 'bulk';
+    const costLabel = document.getElementById('prodFormCostLabel');
+    const priceLabel = document.getElementById('prodFormPriceLabel');
+    const stockLabel = document.getElementById('prodFormStockLabel');
+    const stockInput = document.getElementById('prodFormStock');
+    const priceInput = document.getElementById('prodFormPrice');
+    const nameInput = document.getElementById('prodFormName');
+
+    if (costLabel) costLabel.textContent = isBulk ? 'Costo por Kilo ($) *' : 'Costo ($) *';
+    if (priceLabel) priceLabel.textContent = isBulk ? 'Precio por Kilo ($) *' : 'Precio Venta ($) *';
+    if (stockLabel) stockLabel.textContent = isBulk ? 'Stock Total (Kilos - kg) *' : 'Stock Total (Unidades) *';
+    if (stockInput) stockInput.step = isBulk ? 'any' : '1';
+    if (priceInput) priceInput.placeholder = isBulk ? 'Ej: 45.00 por kg' : '0.00';
+    if (nameInput && !nameInput.value) {
+      nameInput.placeholder = isBulk ? 'Ej: Manzana Roja' : 'Ej: Leche Lala Entera 1L';
+    }
+  }
+
+  const prodFormSaleTypeEl = document.getElementById('prodFormSaleType');
+  if (prodFormSaleTypeEl) {
+    prodFormSaleTypeEl.addEventListener('change', syncProductSaleTypeFields);
+  }
+
   if (btnNuevoProducto) {
     btnNuevoProducto.addEventListener('click', () => {
       productFormTitle.textContent = 'Nuevo Producto';
       productForm.reset();
       document.getElementById('prodFormId').value = '';
+      if (prodFormSaleTypeEl) prodFormSaleTypeEl.value = 'unit';
+      syncProductSaleTypeFields();
       modalProductForm.style.display = 'flex';
       document.getElementById('prodFormBarcode').focus();
     });
@@ -253,6 +284,10 @@ function initInventory() {
     document.getElementById('prodFormBarcode').value = item.barcode;
     document.getElementById('prodFormName').value = item.name;
     document.getElementById('prodFormCategory').value = item.category;
+    if (prodFormSaleTypeEl) {
+      prodFormSaleTypeEl.value = (item.saleType === 'bulk' || item.sale_type === 'bulk') ? 'bulk' : 'unit';
+    }
+    syncProductSaleTypeFields();
     document.getElementById('prodFormCost').value = item.cost;
     document.getElementById('prodFormPrice').value = item.price;
     document.getElementById('prodFormStock').value = item.stock;
@@ -448,9 +483,12 @@ function initInventory() {
       const barcode = document.getElementById('prodFormBarcode').value.trim();
       const name = document.getElementById('prodFormName').value.trim();
       const category = document.getElementById('prodFormCategory').value;
+      const saleType = (document.getElementById('prodFormSaleType')?.value === 'bulk') ? 'bulk' : 'unit';
+      const unitLabel = saleType === 'bulk' ? 'kg' : 'uds';
       const cost = parseFloat(document.getElementById('prodFormCost').value) || 0;
       const price = parseFloat(document.getElementById('prodFormPrice').value) || 0;
-      const stock = parseInt(document.getElementById('prodFormStock').value, 10) || 0;
+      const rawStock = parseFloat(document.getElementById('prodFormStock').value) || 0;
+      const stock = saleType === 'bulk' ? Math.round(rawStock * 1000) / 1000 : Math.round(rawStock);
 
       if (!barcode || !name) {
         alert('Por favor ingresa un código de barras y un nombre válido.');
@@ -465,6 +503,10 @@ function initInventory() {
           item.barcode = barcode;
           item.name = name;
           item.category = category;
+          item.saleType = saleType;
+          item.sale_type = saleType;
+          item.unitLabel = unitLabel;
+          item.unit_label = unitLabel;
           item.cost = cost;
           item.price = price;
           item.stock = stock;
@@ -477,6 +519,10 @@ function initInventory() {
           barcode,
           name,
           category,
+          saleType,
+          sale_type: saleType,
+          unitLabel,
+          unit_label: unitLabel,
           cost,
           price,
           stock
@@ -490,7 +536,7 @@ function initInventory() {
       }
       renderInventory();
       modalProductForm.style.display = 'none';
-      showModal('Operación Exitosa', `Producto "${name}" guardado correctamente en Supabase e inventario.`);
+      showModal('Operación Exitosa', `Producto "${name}"${saleType === 'bulk' ? ' (a granel por kg)' : ''} guardado correctamente.`);
     });
   }
 
@@ -500,9 +546,11 @@ function initInventory() {
   function populateProductSelect(selectElement) {
     selectElement.innerHTML = '';
     inventoryList.forEach(item => {
+      const isBulk = (item.saleType === 'bulk' || item.sale_type === 'bulk');
+      const unitLbl = item.unitLabel || item.unit_label || (isBulk ? 'kg' : 'uds');
       const opt = document.createElement('option');
       opt.value = item.id;
-      opt.textContent = `${item.name} (${item.barcode}) - Stock: ${item.stock} uds`;
+      opt.textContent = `${item.name} (${item.barcode}) - Stock: ${item.stock} ${unitLbl}`;
       selectElement.appendChild(opt);
     });
   }
@@ -519,12 +567,14 @@ function initInventory() {
     entryForm.addEventListener('submit', (e) => {
       e.preventDefault();
       const prodId = parseInt(entryProdSelect.value, 10);
-      const qty = parseInt(document.getElementById('entryQuantity').value, 10) || 0;
+      const product = inventoryList.find(p => p.id === prodId);
+      const isBulk = product && (product.saleType === 'bulk' || product.sale_type === 'bulk');
+      const rawQty = parseFloat(document.getElementById('entryQuantity').value) || 0;
+      const qty = isBulk ? Math.round(rawQty * 1000) / 1000 : parseInt(rawQty, 10);
       const unitCost = parseFloat(document.getElementById('entryUnitCost').value);
 
-      const product = inventoryList.find(p => p.id === prodId);
       if (product && qty > 0) {
-        product.stock += qty;
+        product.stock = Math.round(((parseFloat(product.stock) || 0) + qty) * 1000) / 1000;
         if (!isNaN(unitCost) && unitCost > 0) {
           product.cost = unitCost;
         }
@@ -534,7 +584,8 @@ function initInventory() {
         }
         renderInventory();
         modalEntryForm.style.display = 'none';
-        showModal('Entrada Registrada', `Se ingresaron ${qty} unidades a "${product.name}". Guardado en Kardex y Supabase. Nuevo stock: ${product.stock} uds.`);
+        const unitLbl = isBulk ? 'kg' : 'uds';
+        showModal('Entrada Registrada', `Se ingresaron ${qty} ${unitLbl} a "${product.name}". Nuevo stock: ${product.stock} ${unitLbl}.`);
       }
     });
   }
@@ -558,12 +609,14 @@ function initInventory() {
     shrinkageForm.addEventListener('submit', (e) => {
       e.preventDefault();
       const prodId = parseInt(shrinkageProdSelect.value, 10);
-      const qty = parseInt(document.getElementById('shrinkageQuantity').value, 10) || 0;
+      const product = inventoryList.find(p => p.id === prodId);
+      const isBulk = product && (product.saleType === 'bulk' || product.sale_type === 'bulk');
+      const rawQty = parseFloat(document.getElementById('shrinkageQuantity').value) || 0;
+      const qty = isBulk ? Math.round(rawQty * 1000) / 1000 : parseInt(rawQty, 10);
       const type = document.getElementById('shrinkageType').value;
 
-      const product = inventoryList.find(p => p.id === prodId);
       if (product && qty > 0) {
-        product.stock = Math.max(0, product.stock - qty);
+        product.stock = Math.max(0, Math.round(((parseFloat(product.stock) || 0) - qty) * 1000) / 1000);
         dataService.saveInventoryProducts(inventoryList);
         if (dataService.registerShrinkage) {
           dataService.registerShrinkage(prodId, qty, type);
@@ -571,7 +624,8 @@ function initInventory() {
         renderInventory();
         renderShrinkageTable();
         modalShrinkageForm.style.display = 'none';
-        showModal('Ajuste Aplicado', `Se descontaron ${qty} unidades por [${type}] en "${product.name}". Registrado en Kardex y Supabase. Stock restante: ${product.stock} uds.`);
+        const unitLbl = isBulk ? 'kg' : 'uds';
+        showModal('Ajuste Aplicado', `Se descontaron ${qty} ${unitLbl} por [${type}] en "${product.name}". Stock restante: ${product.stock} ${unitLbl}.`);
       }
     });
   }
@@ -586,16 +640,19 @@ function initInventory() {
         return;
       }
 
-      const headers = ['Código de Barras', 'Producto', 'Categoría', 'Costo', 'Precio Venta', 'Stock Total', 'Estado'];
+      const headers = ['Código de Barras', 'Producto', 'Categoría', 'Tipo Venta', 'Costo', 'Precio Venta', 'Stock Total', 'Unidad', 'Estado'];
       const rows = inventoryList.map(p => {
+        const isBulk = (p.saleType === 'bulk' || p.sale_type === 'bulk');
         const status = p.stock <= 0 ? 'Agotado' : (p.stock <= 5 ? 'Stock Bajo' : 'Óptimo');
         return [
           p.barcode || '',
           p.name || '',
           p.category || 'Abarrotes',
+          isBulk ? 'A granel (kg)' : 'Por pieza',
           { value: Number(p.cost) || 0, currency: true },
           { value: Number(p.price) || 0, currency: true },
           Number(p.stock) || 0,
+          p.unitLabel || p.unit_label || (isBulk ? 'kg' : 'uds'),
           status
         ];
       });

@@ -11,7 +11,7 @@
     "electron:start": "npm --prefix electron start",
     "electron:build": "npm --prefix electron run build",
     "electron:pack": "npx cap sync && npm --prefix electron run pack",
-    "test": "node test/pos_unit_mock_test.js && node test/test_db_expert_concurrency.js && node test/test_sales_history_persistence.js && node test/test_promos_and_error_validation.js && node test/test_cash_movements.js && node test/test_cash_movements_expected_cash.js && node test/test_cash_movements_frontend.js && node test/test_ticket_cashier.js && node test/test_promotions_module_and_excel.js"
+    "test": "node test/pos_unit_mock_test.js && node test/test_db_expert_concurrency.js && node test/test_sales_history_persistence.js && node test/test_promos_and_error_validation.js && node test/test_cash_movements.js && node test/test_cash_movements_expected_cash.js && node test/test_cash_movements_frontend.js && node test/test_ticket_cashier.js && node test/test_promotions_module_and_excel.js && node test/test_bulk_weight_products.js"
   },
   "dependencies": {
     "@capacitor/android": "^7.6.9",

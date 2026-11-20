@@ -255,7 +255,10 @@ const PosDataService = {
         category: p.category || 'General',
         cost: parseFloat(p.cost || 0),
         price: parseFloat(p.price || 0),
-        stock: parseInt(p.stock, 10) || 0,
+        stock: parseFloat(p.stock || 0),
+        saleType: p.sale_type === 'bulk' || p.saleType === 'bulk' ? 'bulk' : 'unit',
+        sale_type: p.sale_type === 'bulk' || p.saleType === 'bulk' ? 'bulk' : 'unit',
+        unitLabel: p.unit_label || p.unitLabel || (p.sale_type === 'bulk' || p.saleType === 'bulk' ? 'kg' : 'uds'),
         iconType: p.icon_type || p.iconType || 'bread',
         promoRule: p.promo_rule || p.promoRule || null
       }));
@@ -490,7 +493,7 @@ const PosDataService = {
         sku: cleanSku,
         name: cleanName,
         unitPrice: parseFloat(it.unitPrice || it.price || 0),
-        quantity: parseInt(it.quantity, 10) || 1,
+        quantity: parseFloat(it.quantity) || 1,
         discount: parseFloat(it.discount || 0),
         subtotal: parseFloat(it.subtotal || ((it.unitPrice || it.price || 0) * (it.quantity || 1))),
         is_service: !!(it.is_service || it.isService),
@@ -1092,7 +1095,9 @@ const PosDataService = {
             price: parseFloat(item.price || 0),
             unitPrice: parseFloat(item.price || 0),
             category: item.category || 'General',
-            stock: parseInt(item.stock || 0, 10),
+            stock: parseFloat(item.stock || 0),
+            saleType: item.saleType || item.sale_type || 'unit',
+            unitLabel: item.unitLabel || item.unit_label || 'uds',
             iconType: item.iconType || 'bread',
             promoRule: item.promoRule || null
           });

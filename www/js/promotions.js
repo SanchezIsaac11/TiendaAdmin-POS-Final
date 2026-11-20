@@ -128,8 +128,8 @@
   /** Descuento en pesos de una promoción sobre una partida (precio unitario x cantidad). */
   function computeDiscount(promo, unitPrice, qty) {
     var p = parseFloat(unitPrice) || 0;
-    var q = parseInt(qty, 10) || 0;
-    if (p <= 0 || q < 1) return 0;
+    var q = parseFloat(qty) || 0;
+    if (p <= 0 || q <= 0) return 0;
     var n = parseInt(promo.cantidad, 10) || 1;
     var d = 0;
 
@@ -145,14 +145,14 @@
         break;
       }
       case 'percent':
-        if (q >= n) d = q * p * ((parseFloat(promo.porcentaje) || 0) / 100);
+        if (n <= 1 || q >= n) d = q * p * ((parseFloat(promo.porcentaje) || 0) / 100);
         break;
       case 'monto':
-        if (q >= n) d = q * Math.min(parseFloat(promo.precio) || 0, p);
+        if (n <= 1 || q >= n) d = q * Math.min(parseFloat(promo.precio) || 0, p);
         break;
       case 'volume': {
         var pm = parseFloat(promo.precio) || 0;
-        if (q >= n && pm > 0 && pm < p) d = q * (p - pm);
+        if ((n <= 1 || q >= n) && pm > 0 && pm < p) d = q * (p - pm);
         break;
       }
       default:
@@ -169,7 +169,7 @@
   function evaluateItem(item, now) {
     if (!item || item.isService || item.is_service) return null;
     var unit = parseFloat(item.unitPrice != null ? item.unitPrice : item.price) || 0;
-    var qty = parseInt(item.quantity, 10) || 0;
+    var qty = parseFloat(item.quantity) || 0;
     var best = null;
 
     state.promos.forEach(function (promo) {

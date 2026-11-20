@@ -41,9 +41,12 @@ function initPosSearch() {
       }
 
       dropdownElement.innerHTML = matches.map((item, idx) => {
+        const isBulk = (item.saleType === 'bulk' || item.sale_type === 'bulk');
+        const unitLbl = item.unitLabel || item.unit_label || (isBulk ? 'kg' : 'uds');
+        const stockNum = parseFloat(item.stock) || 0;
         let stockClass = '';
-        if (item.stock <= 0) stockClass = 'out';
-        else if (item.stock <= 5) stockClass = 'low';
+        if (stockNum <= 0) stockClass = 'out';
+        else if (stockNum <= 5) stockClass = 'low';
 
         return `
           <div class="suggestion-item" data-idx="${idx}">
@@ -60,9 +63,9 @@ function initPosSearch() {
               </div>
             </div>
             <div class="suggestion-price-stock">
-              <div class="suggestion-price">$${parseFloat(item.price || item.unit_price || item.unitPrice || 0).toFixed(2)}</div>
+              <div class="suggestion-price">$${parseFloat(item.price || item.unit_price || item.unitPrice || 0).toFixed(2)}${isBulk ? '/kg' : ''}</div>
               <div class="suggestion-stock ${stockClass}">
-                ${item.stock <= 0 ? 'Agotado' : item.stock + ' uds'}
+                ${stockNum <= 0 ? 'Agotado' : `${isBulk ? Number(stockNum.toFixed(3)) : stockNum} ${unitLbl}`}
               </div>
             </div>
           </div>

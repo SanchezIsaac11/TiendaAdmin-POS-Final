@@ -177,24 +177,25 @@
 
       if (Array.isArray(ticket.items) && ticket.items.length > 0) {
         structuredItems = ticket.items.map(item => {
-          const qty = item.quantity || item.qty || 1;
+          const qty = parseFloat(item.quantity || item.qty || 1) || 1;
+          const isBulk = item.saleType === 'bulk' || item.sale_type === 'bulk' || (qty % 1 !== 0);
           const name = item.name || 'Artículo';
           const price = parseFloat(item.unitPrice || item.price || 0);
           const totalProd = (item.total != null) ? parseFloat(item.total) : (price * qty);
-          return { quantity: qty, name, total: totalProd, price };
+          return { quantity: qty, qtyText: isBulk ? `${qty}kg` : `${qty}x`, name, total: totalProd, price };
         });
         itemsListHtml = structuredItems.map(item => `
           <div class="ticket-item-row" style="display:flex; justify-content:space-between; margin:2px 0;">
-            <span>${item.quantity}x ${escapeTicketHtml(item.name)}</span>
+            <span>${item.qtyText} ${escapeTicketHtml(item.name)}</span>
             <span>$${item.total.toFixed(2)}</span>
           </div>
         `).join('');
       } else if (ticket.itemsDetail) {
         const parts = String(ticket.itemsDetail).split(', ');
         structuredItems = parts.map(part => {
-          const match = part.match(/(.+?)\s+x(\d+)$/i);
+          const match = part.match(/(.+?)\s+x(\d+(?:\.\d+)?)$/i);
           if (match) {
-            return { quantity: parseInt(match[2], 10), name: match[1].trim(), total: 0 };
+            return { quantity: parseFloat(match[2]), name: match[1].trim(), total: 0 };
           }
           return { quantity: 1, name: part.trim(), total: 0 };
         });

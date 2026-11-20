@@ -44,6 +44,7 @@ class PosError extends Error {
 const nowIso = () => new Date().toISOString();
 const toCents = (n) => Math.round(Number(n) * 100);
 const fromCents = (c) => Math.round(c) / 100;
+const roundQty = (q) => Math.round((Number(q) || 0) * 1000) / 1000;
 
 function num(value, { name, min = 0, max = MAX_MONEY, integer = false, required = true } = {}) {
   if (value === undefined || value === null || value === '') {
@@ -114,8 +115,10 @@ CREATE TABLE IF NOT EXISTS products (
   category TEXT NOT NULL DEFAULT 'Abarrotes',
   cost REAL NOT NULL DEFAULT 0 CHECK (cost >= 0),
   price REAL NOT NULL DEFAULT 0 CHECK (price >= 0),
-  stock INTEGER NOT NULL DEFAULT 0 CHECK (stock >= 0),
-  min_stock INTEGER NOT NULL DEFAULT 5 CHECK (min_stock >= 0),
+  stock REAL NOT NULL DEFAULT 0 CHECK (stock >= 0),
+  min_stock REAL NOT NULL DEFAULT 5 CHECK (min_stock >= 0),
+  sale_type TEXT NOT NULL DEFAULT 'unit' CHECK (sale_type IN ('unit','bulk')),
+  unit_label TEXT NOT NULL DEFAULT 'uds',
   icon_type TEXT DEFAULT 'bread',
   promo_rule TEXT,
   origin TEXT DEFAULT 'manual',
@@ -176,7 +179,7 @@ CREATE TABLE IF NOT EXISTS sales (
   user_id INTEGER REFERENCES users(id),
   cashier_name TEXT NOT NULL,
   total_items INTEGER NOT NULL CHECK (total_items > 0),
-  total_pieces INTEGER NOT NULL CHECK (total_pieces > 0),
+  total_pieces REAL NOT NULL CHECK (total_pieces > 0),
   subtotal REAL NOT NULL CHECK (subtotal >= 0),
   discount REAL NOT NULL DEFAULT 0 CHECK (discount >= 0),
   total_net REAL NOT NULL CHECK (total_net >= 0),
@@ -206,7 +209,7 @@ CREATE TABLE IF NOT EXISTS sale_items (
   is_service INTEGER NOT NULL DEFAULT 0,
   unit_price REAL NOT NULL CHECK (unit_price >= 0),
   unit_cost REAL NOT NULL DEFAULT 0 CHECK (unit_cost >= 0),
-  quantity INTEGER NOT NULL CHECK (quantity > 0),
+  quantity REAL NOT NULL CHECK (quantity > 0),
   discount REAL NOT NULL DEFAULT 0 CHECK (discount >= 0),
   subtotal REAL NOT NULL CHECK (subtotal >= 0),
   promo_applied TEXT,
@@ -238,9 +241,9 @@ CREATE TABLE IF NOT EXISTS inventory_movements (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   product_id INTEGER NOT NULL REFERENCES products(id),
   movement_type TEXT NOT NULL,
-  quantity INTEGER NOT NULL,
-  previous_stock INTEGER NOT NULL,
-  new_stock INTEGER NOT NULL CHECK (new_stock >= 0),
+  quantity REAL NOT NULL,
+  previous_stock REAL NOT NULL,
+  new_stock REAL NOT NULL CHECK (new_stock >= 0),
   unit_cost REAL,
   reference TEXT,
   notes TEXT,
@@ -309,6 +312,15 @@ function migrateLegacyTables(d) {
       if (!cols.includes('category')) d.exec("ALTER TABLE cash_movements ADD COLUMN category TEXT NOT NULL DEFAULT 'Otros'");
       if (!cols.includes('payment_method')) d.exec("ALTER TABLE cash_movements ADD COLUMN payment_method TEXT NOT NULL DEFAULT 'cash'");
       if (!cols.includes('notes')) d.exec('ALTER TABLE cash_movements ADD COLUMN notes TEXT');
+    }
+  } catch (_) {}
+
+  // Migra nuevas columnas de productos (venta suelta / a granel por kg) si aún no existen
+  try {
+    const pCols = d.prepare('PRAGMA table_info(products)').all().map(c => c.name);
+    if (pCols.length > 0) {
+      if (!pCols.includes('sale_type')) d.exec("ALTER TABLE products ADD COLUMN sale_type TEXT NOT NULL DEFAULT 'unit'");
+      if (!pCols.includes('unit_label')) d.exec("ALTER TABLE products ADD COLUMN unit_label TEXT NOT NULL DEFAULT 'uds'");
     }
   } catch (_) {}
 
@@ -516,8 +528,12 @@ function mapProduct(r) {
     cost: Number(r.cost) || 0,
     price: Number(r.price) || 0,
     unitPrice: Number(r.price) || 0,
-    stock: r.stock,
-    minStock: r.min_stock,
+    stock: roundQty(r.stock),
+    minStock: roundQty(r.min_stock),
+    saleType: r.sale_type === 'bulk' ? 'bulk' : 'unit',
+    sale_type: r.sale_type === 'bulk' ? 'bulk' : 'unit',
+    unitLabel: r.unit_label || (r.sale_type === 'bulk' ? 'kg' : 'uds'),
+    unit_label: r.unit_label || (r.sale_type === 'bulk' ? 'kg' : 'uds'),
     iconType: r.icon_type || 'bread',
     promoRule: parsePromo(r.promo_rule),
     origen: r.origin,
@@ -593,13 +609,17 @@ function saveProduct(input, userName = 'Sistema') {
   const name = str(input.name ?? input.nombre, { name: 'Nombre', max: 150 });
   const brand = str(input.brand ?? input.marca, { name: 'Marca', max: 80, required: false });
   const category = str(input.category ?? input.categoria, { name: 'Categoría', max: 80, required: false }) || 'Abarrotes';
-  const cost = num(input.cost ?? input.precio_costo ?? 0, { name: 'Costo' });
-  const price = num(input.price ?? input.precio_venta ?? 0, { name: 'Precio de venta' });
+  const rawSaleType = String(input.sale_type ?? input.saleType ?? 'unit').trim().toLowerCase();
+  const saleType = rawSaleType === 'bulk' || rawSaleType === 'kg' || rawSaleType === 'granel' ? 'bulk' : 'unit';
+  const unitLabel = saleType === 'bulk' ? 'kg' : (str(input.unit_label ?? input.unitLabel, { name: 'Unidad', max: 12, required: false }) || 'uds');
+  const isBulk = saleType === 'bulk';
+  const cost = num(input.cost ?? input.precio_costo ?? 0, { name: isBulk ? 'Costo por kg' : 'Costo' });
+  const price = num(input.price ?? input.precio_venta ?? 0, { name: isBulk ? 'Precio por kg' : 'Precio de venta' });
   const stockIn = input.stock === undefined || input.stock === null || input.stock === ''
-    ? null : num(input.stock, { name: 'Stock', max: MAX_STOCK, integer: true });
+    ? null : roundQty(num(input.stock, { name: 'Stock', max: MAX_STOCK, integer: !isBulk }));
   const expected = input.expected_stock === undefined || input.expected_stock === null
-    ? null : num(input.expected_stock, { name: 'Stock esperado', max: MAX_STOCK, integer: true });
-  const minStock = input.min_stock === undefined ? null : num(input.min_stock, { name: 'Stock mínimo', max: 100000, integer: true });
+    ? null : roundQty(num(input.expected_stock, { name: 'Stock esperado', max: MAX_STOCK, integer: !isBulk }));
+  const minStock = input.min_stock === undefined ? null : roundQty(num(input.min_stock, { name: 'Stock mínimo', max: 100000, integer: !isBulk }));
   const promo = input.promoRule !== undefined || input.promo_rule !== undefined
     ? validatePromo(input.promoRule ?? input.promo_rule, price) : undefined;
   const id = input.id !== undefined && input.id !== null && /^\d+$/.test(String(input.id)) ? Number(input.id) : null;
@@ -615,27 +635,27 @@ function saveProduct(input, userName = 'Sistema') {
     if (!row) {
       const initial = stockIn ?? 0;
       const info = d.prepare(`
-        INSERT INTO products (barcode, sku, name, brand, category, cost, price, stock, min_stock, promo_rule, origin)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?)
-      `).run(barcode, barcode, name, brand, category, cost, price, initial, minStock ?? 5, promo ?? null, String(input.origen || input.origin || 'manual').slice(0, 30));
+        INSERT INTO products (barcode, sku, name, brand, category, cost, price, stock, min_stock, sale_type, unit_label, promo_rule, origin)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+      `).run(barcode, barcode, name, brand, category, cost, price, initial, minStock ?? 5, saleType, unitLabel, promo ?? null, String(input.origen || input.origin || 'manual').slice(0, 30));
       const newId = Number(info.lastInsertRowid);
       if (initial > 0) insertMovement(d, { productId: newId, type: 'alta_inicial', qty: initial, prev: 0, next: initial, cost, notes: 'Alta de producto', user: userName });
       return mapProduct(d.prepare('SELECT * FROM products WHERE id = ?').get(newId));
     }
 
     d.prepare(`
-      UPDATE products SET barcode=?, sku=?, name=?, brand=?, category=?, cost=?, price=?, is_active=1,
+      UPDATE products SET barcode=?, sku=?, name=?, brand=?, category=?, cost=?, price=?, sale_type=?, unit_label=?, is_active=1,
         min_stock = COALESCE(?, min_stock), promo_rule = CASE WHEN ? THEN ? ELSE promo_rule END
       WHERE id=?
-    `).run(barcode, barcode, name, brand, category, cost, price, minStock, promo !== undefined ? 1 : 0, promo ?? null, row.id);
+    `).run(barcode, barcode, name, brand, category, cost, price, saleType, unitLabel, minStock, promo !== undefined ? 1 : 0, promo ?? null, row.id);
 
     if (stockIn !== null) {
-      const current = d.prepare('SELECT stock FROM products WHERE id = ?').get(row.id).stock;
-      const target = expected !== null ? current + (stockIn - expected) : stockIn;
+      const current = roundQty(d.prepare('SELECT stock FROM products WHERE id = ?').get(row.id).stock);
+      const target = expected !== null ? roundQty(current + (stockIn - expected)) : stockIn;
       if (target < 0) throw new PosError('INSUFFICIENT_STOCK', `El ajuste dejaría el stock negativo (stock real actual: ${current}).`, 409);
       if (target !== current) {
         d.prepare('UPDATE products SET stock = ? WHERE id = ?').run(target, row.id);
-        insertMovement(d, { productId: row.id, type: 'ajuste_manual', qty: target - current, prev: current, next: target, cost, notes: 'Ajuste desde inventario', user: userName });
+        insertMovement(d, { productId: row.id, type: 'ajuste_manual', qty: roundQty(target - current), prev: current, next: target, cost, notes: 'Ajuste desde inventario', user: userName });
       }
     }
     return mapProduct(d.prepare('SELECT * FROM products WHERE id = ?').get(row.id));
@@ -652,22 +672,27 @@ function deleteProduct(id) {
 }
 
 function addStockTx(d, productRow, qty, unitCost, type, notes, user, reference) {
-  const prev = productRow.stock;
-  const next = prev + qty;
+  const prev = roundQty(productRow.stock);
+  const delta = roundQty(qty);
+  const next = roundQty(prev + delta);
   if (next > MAX_STOCK) throw new PosError('INVALID_INPUT', 'El stock resultante excede el máximo permitido.');
   const cost = unitCost !== null && unitCost !== undefined && unitCost > 0 ? unitCost : productRow.cost;
-  d.prepare('UPDATE products SET stock = stock + ?, cost = ? WHERE id = ?').run(qty, cost, productRow.id);
-  insertMovement(d, { productId: productRow.id, type, qty, prev, next, cost, notes, user, reference });
+  d.prepare('UPDATE products SET stock = ?, cost = ? WHERE id = ?').run(next, cost, productRow.id);
+  insertMovement(d, { productId: productRow.id, type, qty: delta, prev, next, cost, notes, user, reference });
   return { prev, next, cost };
 }
 
 function registerStockEntry(productId, quantity, unitCost, userName = 'Sistema', notes = 'Entrada de mercancía') {
   const pid = num(productId, { name: 'Producto', min: 1, max: Number.MAX_SAFE_INTEGER, integer: true });
-  const qty = num(quantity, { name: 'Cantidad', min: 1, max: 100000, integer: true });
+  const rawQty = num(quantity, { name: 'Cantidad', min: 0.001, max: 100000, integer: false });
   const cost = num(unitCost, { name: 'Costo unitario', required: false });
   return tx((d) => {
     const p = d.prepare('SELECT * FROM products WHERE id = ? AND is_active = 1').get(pid);
     if (!p) throw new PosError('NOT_FOUND', 'Producto no encontrado.', 404);
+    const qty = p.sale_type === 'bulk' ? roundQty(rawQty) : rawQty;
+    if (p.sale_type !== 'bulk' && !Number.isInteger(qty)) {
+      throw new PosError('INVALID_INPUT', 'La cantidad debe ser un número entero para productos por pieza.');
+    }
     const r = addStockTx(d, p, qty, cost, 'entrada_compra', notes, userName);
     return { ok: true, id: p.id, name: p.name, previousStock: r.prev, newStock: r.next };
   });
@@ -675,15 +700,22 @@ function registerStockEntry(productId, quantity, unitCost, userName = 'Sistema',
 
 function registerShrinkage(productId, quantity, reason, userName = 'Sistema') {
   const pid = num(productId, { name: 'Producto', min: 1, max: Number.MAX_SAFE_INTEGER, integer: true });
-  const qty = num(quantity, { name: 'Cantidad', min: 1, max: 100000, integer: true });
+  const rawQty = num(quantity, { name: 'Cantidad', min: 0.001, max: 100000, integer: false });
   const why = str(reason, { name: 'Motivo', max: 120, required: false }) || 'Merma';
   return tx((d) => {
     const p = d.prepare('SELECT * FROM products WHERE id = ? AND is_active = 1').get(pid);
     if (!p) throw new PosError('NOT_FOUND', 'Producto no encontrado.', 404);
-    const info = d.prepare('UPDATE products SET stock = stock - ? WHERE id = ? AND stock >= ?').run(qty, pid, qty);
-    if (info.changes === 0) throw new PosError('INSUFFICIENT_STOCK', `No puedes mermar ${qty} pzas de "${p.name}": solo hay ${p.stock}.`, 409);
-    insertMovement(d, { productId: pid, type: 'merma', qty: -qty, prev: p.stock, next: p.stock - qty, cost: p.cost, notes: why, user: userName });
-    return { ok: true, id: pid, name: p.name, previousStock: p.stock, newStock: p.stock - qty };
+    const qty = p.sale_type === 'bulk' ? roundQty(rawQty) : rawQty;
+    if (p.sale_type !== 'bulk' && !Number.isInteger(qty)) {
+      throw new PosError('INVALID_INPUT', 'La cantidad debe ser un número entero para productos por pieza.');
+    }
+    const prev = roundQty(p.stock);
+    const next = roundQty(prev - qty);
+    if (next < 0) throw new PosError('INSUFFICIENT_STOCK', `No puedes mermar ${qty} ${p.unit_label || 'pzas'} de "${p.name}": solo hay ${prev}.`, 409);
+    const info = d.prepare('UPDATE products SET stock = ? WHERE id = ? AND stock >= ?').run(next, pid, qty);
+    if (info.changes === 0) throw new PosError('INSUFFICIENT_STOCK', `No puedes mermar ${qty} ${p.unit_label || 'pzas'} de "${p.name}": solo hay ${prev}.`, 409);
+    insertMovement(d, { productId: pid, type: 'merma', qty: -qty, prev, next, cost: p.cost, notes: why, user: userName });
+    return { ok: true, id: pid, name: p.name, previousStock: prev, newStock: next };
   });
 }
 
@@ -1010,14 +1042,14 @@ function processSale(payload, user) {
     let discountC = 0;
     let pieces = 0;
     for (const raw of items) {
-      const qty = num(raw.quantity, { name: 'Cantidad', min: 1, max: MAX_QTY, integer: true });
-      pieces += qty;
+      const rawQty = num(raw.quantity, { name: 'Cantidad', min: 0.001, max: MAX_QTY, integer: false });
       if (raw.is_service || raw.isService) {
         const name = str(raw.name, { name: 'Concepto del servicio', max: 150 });
         const priceC = toCents(num(raw.unitPrice ?? raw.unit_price, { name: 'Monto del servicio', min: 0.01, max: 50000 }));
-        if (qty !== 1) throw new PosError('INVALID_INPUT', 'Los servicios se cobran de uno en uno.');
+        if (rawQty !== 1) throw new PosError('INVALID_INPUT', 'Los servicios se cobran de uno en uno.');
+        pieces = roundQty(pieces + 1);
         subtotalC += priceC;
-        lines.push({ product: null, name, barcode: String(raw.sku || '').slice(0, 64), qty, priceC, discC: 0, isService: 1 });
+        lines.push({ product: null, name, barcode: String(raw.sku || '').slice(0, 64), qty: 1, priceC, discC: 0, isService: 1 });
         continue;
       }
       let p = null;
@@ -1028,8 +1060,14 @@ function processSale(payload, user) {
       if (!p || !p.is_active) {
         throw new PosError('PRODUCT_NOT_FOUND', `El producto "${raw.name || raw.barcode || '?'}" no está registrado en el inventario.`, 404);
       }
+      const isBulk = p.sale_type === 'bulk';
+      const qty = isBulk ? roundQty(rawQty) : rawQty;
+      if (!isBulk && !Number.isInteger(qty)) {
+        throw new PosError('INVALID_INPUT', `La cantidad de "${p.name}" debe ser un número entero.`);
+      }
+      pieces = roundQty(pieces + qty);
       const priceC = toCents(p.price);
-      const grossC = priceC * qty;
+      const grossC = Math.round(priceC * qty);
       let discC = 0;
       let promoLabel = null;
       const legacyPromo = parsePromo(p.promo_rule);
@@ -1111,24 +1149,29 @@ function processSale(payload, user) {
     const saleId = Number(saleInfo.lastInsertRowid);
 
     // 4. Descontar stock con UPDATE condicional (imposible vender más de lo existente)
-    const decStock = d.prepare('UPDATE products SET stock = stock - ? WHERE id = ? AND is_active = 1 AND stock >= ?');
+    const decStock = d.prepare('UPDATE products SET stock = ? WHERE id = ? AND is_active = 1 AND stock >= ?');
     const insItem = d.prepare(`
       INSERT INTO sale_items (sale_id, product_id, barcode, product_name, is_service, unit_price, unit_cost, quantity, discount, subtotal, promo_applied)
       VALUES (?,?,?,?,?,?,?,?,?,?,?)
     `);
     for (const ln of lines) {
       if (ln.product) {
-        const before = d.prepare('SELECT stock FROM products WHERE id = ?').get(ln.product.id).stock;
-        const res = decStock.run(ln.qty, ln.product.id, ln.qty);
+        const before = roundQty(d.prepare('SELECT stock FROM products WHERE id = ?').get(ln.product.id).stock);
+        const after = roundQty(before - ln.qty);
+        if (after < 0) {
+          throw new PosError('INSUFFICIENT_STOCK', `Stock insuficiente de "${ln.name}". Disponible: ${before}, solicitado: ${ln.qty}.`, 409,
+            { product_id: ln.product.id, available: before });
+        }
+        const res = decStock.run(after, ln.product.id, ln.qty);
         if (res.changes === 0) {
           throw new PosError('INSUFFICIENT_STOCK', `Stock insuficiente de "${ln.name}". Disponible: ${before}, solicitado: ${ln.qty}.`, 409,
             { product_id: ln.product.id, available: before });
         }
-        insertMovement(d, { productId: ln.product.id, type: 'venta', qty: -ln.qty, prev: before, next: before - ln.qty, cost: ln.product.cost, reference: folio, user: user.full_name });
+        insertMovement(d, { productId: ln.product.id, type: 'venta', qty: -ln.qty, prev: before, next: after, cost: ln.product.cost, reference: folio, user: user.full_name });
       }
       insItem.run(saleId, ln.product ? ln.product.id : null, ln.barcode || null, ln.name, ln.isService,
         fromCents(ln.priceC), ln.product ? Number(ln.product.cost) || 0 : 0, ln.qty, fromCents(ln.discC),
-        fromCents(ln.priceC * ln.qty - ln.discC), ln.promoLabel || null);
+        fromCents(Math.round(ln.priceC * ln.qty) - ln.discC), ln.promoLabel || null);
     }
 
     return {
@@ -1158,8 +1201,10 @@ function cancelSale(folio, reason, user) {
     for (const it of items) {
       const p = d.prepare('SELECT * FROM products WHERE id = ?').get(it.product_id);
       if (!p) continue;
-      d.prepare('UPDATE products SET stock = stock + ? WHERE id = ?').run(it.quantity, p.id);
-      insertMovement(d, { productId: p.id, type: 'cancelacion_venta', qty: it.quantity, prev: p.stock, next: p.stock + it.quantity, cost: it.unit_cost, reference: f, notes: why, user: user.full_name });
+      const prevStock = roundQty(p.stock);
+      const nextStock = roundQty(prevStock + (Number(it.quantity) || 0));
+      d.prepare('UPDATE products SET stock = ? WHERE id = ?').run(nextStock, p.id);
+      insertMovement(d, { productId: p.id, type: 'cancelacion_venta', qty: roundQty(it.quantity), prev: prevStock, next: nextStock, cost: it.unit_cost, reference: f, notes: why, user: user.full_name });
     }
     return { ok: true, folio: f, status: 'cancelled' };
   });
@@ -1352,25 +1397,31 @@ async function pullFromCloudSync(supabaseClient) {
           const local = dbTx.prepare('SELECT id, rev, synced_rev, updated_at FROM products WHERE barcode = ?').get(String(p.barcode));
           const promoText = p.promo_rule ? (typeof p.promo_rule === 'string' ? p.promo_rule : JSON.stringify(p.promo_rule)) : null;
           if (!local) {
+            const pSaleType = p.sale_type === 'bulk' ? 'bulk' : 'unit';
+            const pUnitLabel = p.unit_label || (pSaleType === 'bulk' ? 'kg' : 'uds');
             dbTx.prepare(`
-              INSERT OR IGNORE INTO products (barcode, sku, name, brand, category, cost, price, stock, min_stock, icon_type, promo_rule, origin, is_active, created_at, updated_at, rev, synced_rev)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1)
+              INSERT OR IGNORE INTO products (barcode, sku, name, brand, category, cost, price, stock, min_stock, sale_type, unit_label, icon_type, promo_rule, origin, is_active, created_at, updated_at, rev, synced_rev)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1)
             `).run(
               String(p.barcode), p.sku || String(p.barcode), String(p.name), p.brand || null,
               p.category || 'Abarrotes', Math.max(0, Number(p.cost) || 0), Math.max(0, Number(p.price) || 0),
-              Math.max(0, parseInt(p.stock, 10) || 0), Math.max(0, parseInt(p.min_stock, 10) || 5),
+              Math.max(0, roundQty(p.stock)), Math.max(0, roundQty(p.min_stock ?? 5)),
+              pSaleType, pUnitLabel,
               p.icon_type || 'bread', promoText, p.origin || 'cloud_sync', p.is_active === false ? 0 : 1,
               p.created_at || nowIso(), p.updated_at || nowIso()
             );
             pulled.products++;
           } else if (local.rev === local.synced_rev && p.updated_at && String(p.updated_at) > String(local.updated_at)) {
+            const pSaleType = p.sale_type === 'bulk' ? 'bulk' : 'unit';
+            const pUnitLabel = p.unit_label || (pSaleType === 'bulk' ? 'kg' : 'uds');
             dbTx.prepare(`
-              UPDATE products SET sku=?, name=?, brand=?, category=?, cost=?, price=?, stock=?, min_stock=?, icon_type=?, promo_rule=?, is_active=?, updated_at=?, synced_rev=rev
+              UPDATE products SET sku=?, name=?, brand=?, category=?, cost=?, price=?, stock=?, min_stock=?, sale_type=?, unit_label=?, icon_type=?, promo_rule=?, is_active=?, updated_at=?, synced_rev=rev
               WHERE id=?
             `).run(
               p.sku || String(p.barcode), String(p.name), p.brand || null, p.category || 'Abarrotes',
               Math.max(0, Number(p.cost) || 0), Math.max(0, Number(p.price) || 0),
-              Math.max(0, parseInt(p.stock, 10) || 0), Math.max(0, parseInt(p.min_stock, 10) || 5),
+              Math.max(0, roundQty(p.stock)), Math.max(0, roundQty(p.min_stock ?? 5)),
+              pSaleType, pUnitLabel,
               p.icon_type || 'bread', promoText, p.is_active === false ? 0 : 1, p.updated_at, local.id
             );
             pulled.products++;
@@ -1494,6 +1545,20 @@ async function performCloudBackup(supabaseClient) {
       let { error } = await supabaseClient
         .from(t.name)
         .upsert(payload, { onConflict: t.pk });
+
+      // Si products en Supabase aún no tiene sale_type / unit_label / numeric stock, reintentar con esquema base
+      if (error && t.name === 'products' && /column|schema cache|integer/i.test(error.message)) {
+        const baseProducts = payload.map(r => {
+          const copy = { ...r };
+          delete copy.sale_type;
+          delete copy.unit_label;
+          copy.stock = Math.round(Number(copy.stock) || 0);
+          copy.min_stock = Math.round(Number(copy.min_stock) || 0);
+          return copy;
+        });
+        const retry = await supabaseClient.from(t.name).upsert(baseProducts, { onConflict: t.pk });
+        error = retry.error;
+      }
 
       // Si cash_movements en Supabase aún no tiene las columnas extendidas, reintentar con columnas base
       if (error && t.name === 'cash_movements' && /column|schema cache/i.test(error.message)) {
